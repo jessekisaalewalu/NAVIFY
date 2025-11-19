@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Navify — Smart Commuter</title>
   <link rel="stylesheet" href="css/style.css">
+  <!-- Leaflet CSS for fallback map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <!-- Load socket.io client from CDN (fallback to ensure `io` exists even if backend is down) -->
   <script defer src="https://cdn.jsdelivr.net/npm/socket.io@4.7.1/client-dist/socket.io.min.js"></script>
+  <!-- Leaflet JS for fallback map -->
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="js/app.js"></script>
 </head>
 <body>
@@ -28,7 +32,8 @@
         <p class="muted">Mock map — traffic hotspots update in real time</p>
       </div>
       <div id="map" class="map">
-        <!-- We'll render simple boxes representing areas -->
+        <!-- Google Maps will be rendered here if API key is provided -->
+        <!-- Fallback: simple boxes representing areas -->
       </div>
     </section>
 
@@ -36,8 +41,8 @@
       <h2>Route Suggestions</h2>
       <div id="routes" class="routes-list"></div>
       <div class="controls">
-        <input id="origin" placeholder="From" />
-        <input id="dest" placeholder="To" />
+        <input id="origin" placeholder="From (leave empty to use your location)" />
+        <input id="dest" placeholder="To (destination required)" />
         <button id="findRoutes" class="btn">Find Routes</button>
       </div>
     </section>
