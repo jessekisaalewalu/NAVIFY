@@ -248,7 +248,21 @@ const getSavedRoutes = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const routes = await Route.findByUserId(userId);
-    res.json({ routes });
+    // normalize DB fields (snake_case) to camelCase for client
+    const normalized = routes.map(r => ({
+      id: r.id,
+      userId: r.user_id || r.userId,
+      originAddress: r.origin_address || r.originAddress,
+      originLat: r.origin_lat || r.originLat,
+      originLng: r.origin_lng || r.originLng,
+      destAddress: r.dest_address || r.destAddress,
+      destLat: r.dest_lat || r.destLat,
+      destLng: r.dest_lng || r.destLng,
+      distanceKm: r.distance_km || r.distanceKm,
+      durationMin: r.duration_min || r.durationMin,
+      routeData: r.route_data || r.routeData
+    }));
+    res.json({ routes: normalized });
   } catch (error) {
     next(error);
   }
@@ -267,7 +281,21 @@ const getSavedRoute = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    res.json(route);
+    const normalized = {
+      id: route.id,
+      userId: route.user_id || route.userId,
+      originAddress: route.origin_address || route.originAddress,
+      originLat: route.origin_lat || route.originLat,
+      originLng: route.origin_lng || route.originLng,
+      destAddress: route.dest_address || route.destAddress,
+      destLat: route.dest_lat || route.destLat,
+      destLng: route.dest_lng || route.destLng,
+      distanceKm: route.distance_km || route.distanceKm,
+      durationMin: route.duration_min || route.durationMin,
+      routeData: route.route_data || route.routeData
+    };
+
+    res.json(normalized);
   } catch (error) {
     next(error);
   }
@@ -293,11 +321,32 @@ const deleteSavedRoute = async (req, res, next) => {
   }
 };
 
+const updateSavedRoute = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const route = await Route.findById(id);
+
+    if (!route) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    if (route.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updatedRoute = await Route.update(id, req.body);
+    res.json(updatedRoute);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getRoutes,
   saveRoute,
   getSavedRoutes,
   getSavedRoute,
+  updateSavedRoute,
   deleteSavedRoute
 };
 

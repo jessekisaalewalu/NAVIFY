@@ -55,9 +55,34 @@ const getProfile = async (req, res, next) => {
   }
 };
 
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+    const userId = req.user.id;
+
+    // Check if email is already in use by another user
+    if (email && email !== req.user.email) {
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+    }
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (email !== undefined) updates.email = email;
+
+    const updatedUser = await User.update(userId, updates);
+    res.json({ message: 'Profile updated successfully', user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
-  getProfile
+  getProfile,
+  updateProfile
 };
 

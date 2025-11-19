@@ -132,21 +132,21 @@ function setupSocketIO(server) {
   return io;
 }
 
-// Initialize database and start server
+// Initialize database and start server (only when running normally)
 async function startServer() {
   try {
     await initializeDatabase();
     await seedTrafficData();
-    
-    const PORT = 3000;
-    
+
+    const PORT = process.env.PORT || 3000;
+
     const server = app.listen(PORT, "127.0.0.1", () => {
       console.log(`Server running at http://127.0.0.1:${PORT}`);
     });
 
     // Setup Socket.IO after server is created
     const io = setupSocketIO(server);
-    
+
     // Start traffic update interval
     setInterval(() => broadcastTrafficUpdate(io), 8000);
   } catch (error) {
@@ -155,4 +155,10 @@ async function startServer() {
   }
 }
 
-startServer();
+// Only start the server when not in a test environment. This allows Supertest
+// to import the Express `app` directly without the server already listening.
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+module.exports = app;

@@ -98,6 +98,34 @@ router.get('/auth/profile', authenticate, authController.getProfile);
 
 /**
  * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *       409:
+ *         description: Email already exists
+ */
+router.put('/auth/profile', authenticate, authController.updateProfile);
+
+/**
+ * @swagger
  * /api/traffic:
  *   get:
  *     summary: Get all traffic areas
@@ -332,6 +360,26 @@ router.get('/routes/saved', authenticate, routeController.getSavedRoutes);
  *         description: Route details
  */
 router.get('/routes/saved/:id', authenticate, routeController.getSavedRoute);
+
+/**
+ * @swagger
+ * /api/routes/saved/{id}:
+ *   put:
+ *     summary: Update a saved route
+ *     tags: [Routes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Route updated
+ */
+router.put('/routes/saved/:id', authenticate, routeController.updateSavedRoute);
 
 /**
  * @swagger
