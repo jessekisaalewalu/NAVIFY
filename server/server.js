@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const https = require('https');
+const fs = require('fs');
 const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -51,11 +53,20 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Allow requests from the frontend Live Server and local dev origins
-app.use(cors({
-  origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000'],
-  methods: ['GET','POST','PUT','DELETE'],
-  credentials: true
-}));
+// Allow CORS from common dev origins. In development allow any origin to ease local testing.
+if (process.env.NODE_ENV === 'production') {
+  app.use(cors({
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000'],
+    methods: ['GET','POST','PUT','DELETE'],
+    credentials: true
+  }));
+} else {
+  app.use(cors({
+    origin: true, // reflect request origin
+    methods: ['GET','POST','PUT','DELETE'],
+    credentials: true
+  }));
+}
 app.use(express.json());
 
 // Serve client static files
@@ -102,7 +113,9 @@ function setupSocketIO(server) {
   // Initialize Socket.IO with CORS policy to allow Live Server origins
   const io = new Server(server, {
     cors: {
-      origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000'],
+      origin: process.env.NODE_ENV === 'production'
+        ? ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000']
+        : true,
       methods: ['GET','POST']
     }
   });
@@ -139,10 +152,31 @@ async function startServer() {
     await seedTrafficData();
 
     const PORT = process.env.PORT || 3000;
+    const HOST = process.env.HOST || '127.0.0.1';
 
-    const server = app.listen(PORT, "127.0.0.1", () => {
-      console.log(`Server running at http://127.0.0.1:${PORT}`);
-    });
+    let server;
+    // If SSL key and cert are provided, start HTTPS server
+    const keyPath = process.env.SSL_KEY_PATH || process.env.SSL_KEY || null;
+    const certPath = process.env.SSL_CERT_PATH || process.env.SSL_CERT || null;
+
+    if (keyPath && certPath) {
+      try {
+        const key = fs.readFileSync(keyPath);
+        const cert = fs.readFileSync(certPath);
+        server = https.createServer({ key, cert }, app).listen(PORT, HOST, () => {
+          console.log(`Server running at https://${HOST}:${PORT}`);
+        });
+      } catch (err) {
+        console.error('Failed to read SSL key/cert, falling back to HTTP:', err.message);
+        server = app.listen(PORT, HOST, () => {
+          console.log(`Server running at http://${HOST}:${PORT}`);
+        });
+      }
+    } else {
+      server = app.listen(PORT, HOST, () => {
+        console.log(`Server running at http://${HOST}:${PORT}`);
+      });
+    }
 
     // Setup Socket.IO after server is created
     const io = setupSocketIO(server);

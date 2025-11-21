@@ -4,9 +4,19 @@
 // mark that JS is enabled so CSS can show slide animations
 document.documentElement.classList.add('js');
 
-// determine backend origin dynamically: if frontend is served from port 3000, use relative paths
-const SERVER_ORIGIN = (location.port === '3000' || (location.hostname === 'localhost' && location.port === '3000')) ? '' : 'http://localhost:3000';
+// Use relative API URLs by default so frontend and backend can be served from the same host.
+// If you are running the frontend separately during development and need to point
+// to a different backend, set `window.__API_ORIGIN__ = 'http://localhost:3000'` before
+// this script runs or change this value here.
+const SERVER_ORIGIN = window.__API_ORIGIN__ || '';
 function apiUrl(path){ return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path; }
+
+// Authentication state
+let authToken = localStorage.getItem('authToken');
+let currentUser = null;
+function getAuthHeaders() {
+  return authToken ? { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
 
 // create socket if `io` is available, otherwise null
 let socket = null;
@@ -199,6 +209,144 @@ function initMap(mapEl){
   }
 }
 
+// Auth functions
+async function loginUser(email, password) {
+  try {
+    const res = await fetch(apiUrl('/api/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
+    
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('authToken', authToken);
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    setStatus(`Logged in as ${currentUser.name}`, '#00d4ff');
+    return data;
+  } catch (error) {
+    debug('Login error: ' + error.message);
+    throw error;
+  }
+}
+
+async function registerUser(email, password, name) {
+  try {
+    const res = await fetch(apiUrl('/api/auth/register'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+    
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('authToken', authToken);
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    setStatus(`Welcome ${currentUser.name}!`, '#00d4ff');
+    return data;
+  } catch (error) {
+    debug('Register error: ' + error.message);
+    throw error;
+  }
+}
+
+function logoutUser() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('currentUser');
+  setStatus('Logged out', 'var(--muted)');
+}
+
+async function saveRoute(route) {
+  if (!authToken) {
+    alert('Please login to save routes');
+    showAuthModal();
+    return;
+  }
+  
+  try {
+    const res = await fetch(apiUrl('/api/routes'), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        originAddress: route.origin || 'Unknown',
+        originLat: route.origin_location?.lat || 0,
+        originLng: route.origin_location?.lng || 0,
+        destAddress: route.dest || 'Unknown',
+        destLat: route.dest_location?.lat || 0,
+        destLng: route.dest_location?.lng || 0,
+        distanceKm: route.distance_km,
+        durationMin: route.eta_min,
+        routeData: route
+      })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to save route');
+    }
+    
+    debug('Route saved: ' + data.id);
+    alert('Route saved successfully!');
+    return data;
+  } catch (error) {
+    debug('Save route error: ' + error.message);
+    alert('Error saving route: ' + error.message);
+  }
+}
+
+async function getSavedRoutes() {
+  if (!authToken) return [];
+  
+  try {
+    const res = await fetch(apiUrl('/api/routes/saved'), {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    return data.routes || [];
+  } catch (error) {
+    debug('Get saved routes error: ' + error.message);
+    return [];
+  }
+}
+
+async function deleteSavedRoute(routeId) {
+  if (!authToken) return;
+  
+  try {
+    const res = await fetch(apiUrl(`/api/routes/saved/${routeId}`), {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to delete route');
+    }
+    
+    debug('Route deleted: ' + routeId);
+    return true;
+  } catch (error) {
+    debug('Delete route error: ' + error.message);
+    return false;
+  }
+}
+
+function showAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) modal.style.display = 'flex';
+}
+
 // Entry point: DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   const mapEl = document.getElementById('map');
@@ -210,6 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const findRoutesBtn = document.getElementById('findRoutes');
   const originIn = document.getElementById('origin');
   const destIn = document.getElementById('dest');
+  
+  // Restore user session
+  if (localStorage.getItem('currentUser')) {
+    currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    setStatus(`Logged in as ${currentUser.name}`, '#00d4ff');
+  }
 
   // helper to render the traffic areas (fallback when no Google Maps)
   function renderAreas(areas){
@@ -865,9 +1019,10 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class='muted'>${details}</div>
               ${stepsHtml}
             </div>
-            <div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
               <strong>${r.eta_min} min</strong>
-              ${r.steps ? `<button class='btn small details-btn' style="margin-top:4px; display:block; width:100%;">Details</button>` : ''}
+              ${r.steps ? `<button class='btn small details-btn' style="display:block; width:100%;">Details</button>` : ''}
+              <button class='btn small save-route-btn' style="display:block; width:100%; background:#4ecdc4;">Save</button>
             </div>
           `;
           
@@ -882,6 +1037,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailsBtn.textContent = isHidden ? 'Hide Details' : 'Details';
               });
             }
+          }
+          
+          // Add save route button listener
+          const saveBtn = div.querySelector('.save-route-btn');
+          if(saveBtn){
+            saveBtn.addEventListener('click', async () => {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Saving...';
+              
+              const routeToSave = {
+                origin: originVal,
+                dest: destVal,
+                origin_location: data.origin_location || originCoords,
+                dest_location: data.dest_location || destCoords,
+                distance_km: r.distance_km,
+                eta_min: r.eta_min,
+                geometry: r.geometry,
+                ...r
+              };
+              
+              await saveRoute(routeToSave);
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save';
+            });
           }
           
           // Add "Show on Map" button for all routes
@@ -990,6 +1169,170 @@ document.addEventListener('DOMContentLoaded', () => {
   destIn.addEventListener('keypress', (e) => {
     if(e.key === 'Enter') findRoutes();
   });
+
+  // Auth UI setup
+  const authBtn = document.getElementById('authBtn');
+  const savedRoutesBtn = document.getElementById('savedRoutesBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authModal = document.getElementById('authModal');
+  const savedRoutesModal = document.getElementById('savedRoutesModal');
+  
+  function updateAuthUI() {
+    if (currentUser) {
+      authBtn.style.display = 'none';
+      savedRoutesBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'inline-block';
+    } else {
+      authBtn.style.display = 'inline-block';
+      savedRoutesBtn.style.display = 'none';
+      logoutBtn.style.display = 'none';
+    }
+  }
+  
+  authBtn.addEventListener('click', showAuthModal);
+  logoutBtn.addEventListener('click', () => {
+    logoutUser();
+    updateAuthUI();
+  });
+  
+  document.getElementById('authModalClose').addEventListener('click', () => {
+    authModal.style.display = 'none';
+  });
+  
+  document.getElementById('savedRoutesModalClose').addEventListener('click', () => {
+    savedRoutesModal.style.display = 'none';
+  });
+  
+  // Auth tab switching
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      tab.classList.add('active');
+      const formId = tab.dataset.tab + 'Tab';
+      document.getElementById(formId).classList.add('active');
+    });
+  });
+  
+  // Login functionality
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+    
+    if (!email || !password) {
+      errorEl.textContent = 'Please fill in all fields';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    try {
+      await loginUser(email, password);
+      authModal.style.display = 'none';
+      updateAuthUI();
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+      errorEl.style.display = 'none';
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = 'block';
+    }
+  });
+  
+  // Register functionality
+  document.getElementById('registerBtn').addEventListener('click', async () => {
+    const name = document.getElementById('registerName').value;
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const errorEl = document.getElementById('registerError');
+    
+    if (!name || !email || !password) {
+      errorEl.textContent = 'Please fill in all fields';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    if (password.length < 6) {
+      errorEl.textContent = 'Password must be at least 6 characters';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    try {
+      await registerUser(email, password, name);
+      authModal.style.display = 'none';
+      updateAuthUI();
+      document.getElementById('registerName').value = '';
+      document.getElementById('registerEmail').value = '';
+      document.getElementById('registerPassword').value = '';
+      errorEl.style.display = 'none';
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = 'block';
+    }
+  });
+  
+  // Saved routes functionality
+  savedRoutesBtn.addEventListener('click', async () => {
+    const savedRoutes = await getSavedRoutes();
+    const savedRoutesList = document.getElementById('savedRoutesList');
+    
+    if (savedRoutes.length === 0) {
+      savedRoutesList.innerHTML = '<div class="muted">No saved routes yet</div>';
+    } else {
+      savedRoutesList.innerHTML = '';
+      savedRoutes.forEach(route => {
+        const div = document.createElement('div');
+        div.className = 'saved-route-item';
+        div.innerHTML = `
+          <div class="saved-route-info">
+            <h4>${route.origin_address || 'Unknown'} → ${route.dest_address || 'Unknown'}</h4>
+            <p>${route.distance_km} km • ${route.duration_min} min</p>
+          </div>
+          <div class="saved-route-actions">
+            <button class="btn small view-route-btn">View</button>
+            <button class="btn small delete-route-btn" style="background:#ff6b6b;">Delete</button>
+          </div>
+        `;
+        
+        const viewBtn = div.querySelector('.view-route-btn');
+        const deleteBtn = div.querySelector('.delete-route-btn');
+        
+        viewBtn.addEventListener('click', () => {
+          // Display route on map
+          const routeData = route.route_data ? (typeof route.route_data === 'string' ? JSON.parse(route.route_data) : route.route_data) : route;
+          const originCoords = { lat: route.origin_lat, lng: route.origin_lng };
+          const destCoords = { lat: route.dest_lat, lng: route.dest_lng };
+          
+          if (map && googleMapsLoaded) {
+            displayRouteOnGoogleMap(originCoords, destCoords, routeData);
+          } else if (leafletMap) {
+            displayRouteOnLeaflet(originCoords, destCoords, routeData.geometry);
+          }
+          
+          savedRoutesModal.style.display = 'none';
+          const mapPanel = document.querySelector('.map-panel');
+          if (mapPanel) mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        
+        deleteBtn.addEventListener('click', async () => {
+          if (confirm('Delete this route?')) {
+            await deleteSavedRoute(route.id);
+            div.remove();
+            if (savedRoutesList.children.length === 0) {
+              savedRoutesList.innerHTML = '<div class="muted">No saved routes yet</div>';
+            }
+          }
+        });
+        
+        savedRoutesList.appendChild(div);
+      });
+    }
+    
+    savedRoutesModal.style.display = 'flex';
+  });
+  
+  updateAuthUI();
 
   // initial load
   loadConfig();

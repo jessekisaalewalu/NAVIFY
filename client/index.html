@@ -22,6 +22,9 @@
     </div>
     <nav class="nav-actions">
       <button id="refreshBtn" class="btn accent">Refresh</button>
+      <button id="authBtn" class="btn">Login</button>
+      <button id="savedRoutesBtn" class="btn" style="display:none;">My Routes</button>
+      <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
     </nav>
   </header>
 
@@ -71,5 +74,42 @@
   <footer class="site-footer">
     <p>&copy; Navify — Demo</p>
   </footer>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="authModalClose">&times;</button>
+      <h2>Login / Register</h2>
+      
+      <div id="authTabs" class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      
+      <div id="loginTab" class="auth-form active">
+        <input id="loginEmail" type="email" placeholder="Email" />
+        <input id="loginPassword" type="password" placeholder="Password" />
+        <button id="loginBtn" class="btn">Login</button>
+        <div id="loginError" class="error-message" style="display:none;"></div>
+      </div>
+      
+      <div id="registerTab" class="auth-form">
+        <input id="registerName" type="text" placeholder="Name" />
+        <input id="registerEmail" type="email" placeholder="Email" />
+        <input id="registerPassword" type="password" placeholder="Password (min 6 chars)" />
+        <button id="registerBtn" class="btn">Register</button>
+        <div id="registerError" class="error-message" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Routes Modal -->
+  <div id="savedRoutesModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="savedRoutesModalClose">&times;</button>
+      <h2>My Saved Routes</h2>
+      <div id="savedRoutesList" class="saved-routes-list"></div>
+    </div>
+  </div>
 </body>
 </html>
