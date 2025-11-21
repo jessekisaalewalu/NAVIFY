@@ -379,7 +379,7 @@ describe('CRUD Operations', () => {
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body.routes)).toBe(true);
       expect(res.body.routes.length).toBeGreaterThan(0);
-    });
+    }, 10000);  // 10 second timeout for OSRM API call
 
     test('GET /api/routes - Reject missing origin', async () => {
       const res = await request(app)

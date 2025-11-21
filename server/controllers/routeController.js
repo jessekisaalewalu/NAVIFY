@@ -16,34 +16,98 @@ async function resolveLocation(input) {
   return await geocodeAddress(input);
 }
 
+// Global routing using OSRM (Open Source Routing Machine) - works worldwide, no API key needed
+async function getRoutesWithOSRM(originLoc, destLoc, originName, destName) {
+  try {
+    if (!originLoc || !destLoc) return null;
+    
+    // OSRM uses lng,lat format
+    const coordinates = `${originLoc.lng},${originLoc.lat};${destLoc.lng},${destLoc.lat}`;
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordinates}`;
+    
+    const response = await axios.get(osrmUrl, {
+      params: {
+        overview: 'full',
+        steps: 'true',
+        geometries: 'geojson',
+        continue_straight: 'default'
+      },
+      timeout: 3000  // Reduced timeout to 3 seconds for OSRM
+    });
+
+    if (response.data && response.data.routes && response.data.routes.length > 0) {
+      const routes = response.data.routes.map((route, idx) => {
+        const distanceKm = (route.distance / 1000).toFixed(1);
+        const durationMin = Math.round(route.duration / 60);
+        
+        const steps = route.legs.flatMap(leg =>
+          leg.steps.map(step => ({
+            instruction: step.maneuver?.instruction || step.name || 'Continue',
+            distance: `${(step.distance / 1000).toFixed(2)} km`,
+            duration: `${Math.round(step.duration / 60)} min`,
+            name: step.name
+          }))
+        );
+
+        return {
+          id: shortid.generate(),
+          name: idx === 0 ? '⭐ Fastest Route' : `Route Option ${idx + 1}`,
+          summary: `Driving via ${route.legs.map(l => l.summary || '').join(' - ')}`,
+          distance_km: parseFloat(distanceKm),
+          distance_text: `${distanceKm} km`,
+          eta_min: durationMin,
+          duration_text: `${durationMin} min`,
+          steps: steps,
+          geometry: route.geometry,
+          origin_location: originLoc,
+          dest_location: destLoc,
+          provider: 'osrm'
+        };
+      });
+
+      return {
+        origin: originName,
+        dest: destName,
+        origin_location: originLoc,
+        dest_location: destLoc,
+        generated: Date.now(),
+        routes,
+        status: 'OK',
+        provider: 'osrm'
+      };
+    }
+  } catch (error) {
+    console.error('OSRM routing error:', error.message);
+  }
+  return null;
+}
+
 const getRoutes = async (req, res, next) => {
   try {
     const { origin, dest } = req.query;
 
-    // Try Geoapify first if API key is available
+    // Step 1: Resolve origin and destination to coordinates
+    let originLoc = await resolveLocation(origin);
+    let destLoc = await resolveLocation(dest);
+
+    if (!originLoc) {
+      return res.status(400).json({ error: 'Could not find origin address. Try a more specific address or coordinates (lat,lng).' });
+    }
+    if (!destLoc) {
+      return res.status(400).json({ error: 'Could not find destination address. Try a more specific address or coordinates (lat,lng).' });
+    }
+
+    // Step 2: Try OSRM first (Global, free, no API key needed) ✅
+    let osrmResult = await getRoutesWithOSRM(originLoc, destLoc, origin, dest);
+    if (osrmResult) {
+      return res.json(osrmResult);
+    }
+
+    // Step 3: Fallback to Geoapify if OSRM fails
     if (GEOAPIFY_KEY) {
       try {
-        let originCoords = origin;
-        let destCoords = dest;
-
-        if (!/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(origin)) {
-          const originLoc = await geocodeAddress(origin);
-          if (!originLoc) {
-            return res.status(400).json({ error: 'Could not find origin address' });
-          }
-          originCoords = `${originLoc.lat},${originLoc.lng}`;
-        }
-
-        if (!/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(dest)) {
-          const destLoc = await geocodeAddress(dest);
-          if (!destLoc) {
-            return res.status(400).json({ error: 'Could not find destination address' });
-          }
-          destCoords = `${destLoc.lat},${destLoc.lng}`;
-        }
-
         const routingUrl = 'https://api.geoapify.com/v1/routing';
-        const waypoints = `${originCoords}|${destCoords}`;
+        const waypoints = `${originLoc.lat},${originLoc.lng}|${destLoc.lat},${destLoc.lng}`;
 
         const response = await axios.get(routingUrl, {
           params: {
@@ -55,11 +119,6 @@ const getRoutes = async (req, res, next) => {
         });
 
         if (response.data && response.data.features && response.data.features.length > 0) {
-          const originParts = originCoords.split(',');
-          const destParts = destCoords.split(',');
-          const originLocation = { lat: parseFloat(originParts[0]), lng: parseFloat(originParts[1]) };
-          const destLocation = { lat: parseFloat(destParts[0]), lng: parseFloat(destParts[1]) };
-
           const routes = response.data.features.map((feature, idx) => {
             const props = feature.properties;
             const distanceKm = (props.distance / 1000).toFixed(1);
@@ -78,8 +137,8 @@ const getRoutes = async (req, res, next) => {
               geometry = {
                 type: 'LineString',
                 coordinates: [
-                  [originLocation.lng, originLocation.lat],
-                  [destLocation.lng, destLocation.lat]
+                  [originLoc.lng, originLoc.lat],
+                  [destLoc.lng, destLoc.lat]
                 ]
               };
             }
@@ -94,37 +153,36 @@ const getRoutes = async (req, res, next) => {
               duration_text: `${durationMin} min`,
               steps: steps,
               geometry: geometry,
-              waypoints: waypoints,
-              origin_location: originLocation,
-              dest_location: destLocation
+              origin_location: originLoc,
+              dest_location: destLoc,
+              provider: 'geoapify'
             };
           });
 
-          res.json({
+          return res.json({
             origin,
             dest,
-            origin_location: originLocation,
-            dest_location: destLocation,
+            origin_location: originLoc,
+            dest_location: destLoc,
             generated: Date.now(),
             routes,
             status: 'OK',
             provider: 'geoapify'
           });
-          return;
         }
       } catch (error) {
         console.error('Geoapify routing error:', error.message);
       }
     }
 
-    // Fallback to Google Maps
+    // Step 4: Fallback to Google Maps
     if (MAPS_KEY) {
       try {
         const directionsUrl = 'https://maps.googleapis.com/maps/api/directions/json';
         const response = await axios.get(directionsUrl, {
           params: {
-            origin: origin,
-            destination: dest,
+            origin: `${originLoc.lat},${originLoc.lng}`,
+            destination: `${destLoc.lat},${destLoc.lng}`,
             alternatives: true,
             key: MAPS_KEY,
             units: 'metric'
@@ -144,7 +202,7 @@ const getRoutes = async (req, res, next) => {
 
             return {
               id: shortid.generate(),
-              name: idx === 0 ? 'Fastest Route' : `Alternative ${idx}`,
+              name: idx === 0 ? '⭐ Fastest Route' : `Alternative ${idx}`,
               summary: route.summary || 'Route',
               distance_km: parseFloat(distanceKm),
               distance_text: leg.distance.text,
@@ -152,82 +210,103 @@ const getRoutes = async (req, res, next) => {
               duration_text: leg.duration.text,
               steps: steps,
               polyline: route.overview_polyline.points,
-              bounds: route.bounds
+              bounds: route.bounds,
+              provider: 'google'
             };
           });
 
-          res.json({
+          return res.json({
             origin,
             dest,
+            origin_location: originLoc,
+            dest_location: destLoc,
             generated: Date.now(),
             routes,
             status: 'OK',
             provider: 'google'
           });
-          return;
         }
       } catch (error) {
         console.error('Google Directions API error:', error.message);
       }
     }
 
-    // Final fallback to mock data with simple geometry
+    // Step 5: Final fallback - return mock data with real coordinates
     const areas = await TrafficArea.findAll();
     const avgCong = areas.length > 0
       ? Math.round(areas.reduce((s, a) => s + a.congestion, 0) / areas.length)
       : 50;
     const baseFast = 8 + Math.round(avgCong / 8);
 
-    const originLoc = await resolveLocation(origin);
-    const destLoc = await resolveLocation(dest);
+    const geometry = {
+      type: 'LineString',
+      coordinates: [
+        [originLoc.lng, originLoc.lat],
+        [destLoc.lng, destLoc.lat]
+      ]
+    };
 
-    const geometry = (originLoc && destLoc)
-      ? {
-          type: 'LineString',
-          coordinates: [
-            [originLoc.lng, originLoc.lat],
-            [destLoc.lng, destLoc.lat]
-          ]
-        }
-      : null;
+    // Calculate actual distance using Haversine formula
+    const distanceKm = haversineDistance(originLoc.lat, originLoc.lng, destLoc.lat, destLoc.lng);
+    const estimatedMinutes = Math.max(6, baseFast + Math.round((distanceKm / 50) * 60));
 
     const routes = [
       {
         id: shortid.generate(),
-        name: 'Fastest',
-        distance_km: 6.2,
-        eta_min: Math.max(6, baseFast + Math.round(Math.random() * 6)),
-        geometry
+        name: '⭐ Fastest Route',
+        distance_km: distanceKm,
+        distance_text: `${distanceKm.toFixed(1)} km`,
+        eta_min: estimatedMinutes,
+        duration_text: `${estimatedMinutes} min`,
+        geometry,
+        origin_location: originLoc,
+        dest_location: destLoc,
+        provider: 'fallback'
       },
       {
         id: shortid.generate(),
-        name: 'Balanced',
-        distance_km: 7.4,
-        eta_min: Math.max(8, baseFast + 4 + Math.round(Math.random() * 8)),
-        geometry
-      },
-      {
-        id: shortid.generate(),
-        name: 'Scenic (avoid highway)',
-        distance_km: 9.8,
-        eta_min: Math.max(10, baseFast + 8 + Math.round(Math.random() * 10)),
-        geometry
+        name: 'Scenic Route',
+        distance_km: distanceKm * 1.2,
+        distance_text: `${(distanceKm * 1.2).toFixed(1)} km`,
+        eta_min: Math.round(estimatedMinutes * 1.3),
+        duration_text: `${Math.round(estimatedMinutes * 1.3)} min`,
+        geometry,
+        origin_location: originLoc,
+        dest_location: destLoc,
+        provider: 'fallback'
       }
     ];
 
     res.json({
       origin,
       dest,
-      origin_location: originLoc || null,
-      dest_location: destLoc || null,
+      origin_location: originLoc,
+      dest_location: destLoc,
       generated: Date.now(),
       routes,
-      mock: true
+      status: 'OK',
+      provider: 'fallback (mock)',
+      note: 'Using estimated route. For more accurate results, configure OSRM, Geoapify, or Google Maps API.'
     });
+
   } catch (error) {
+    console.error('getRoutes error:', error);
     next(error);
   }
 };
+
+// Helper function to calculate distance between two points (Haversine formula)
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const saveRoute = async (req, res, next) => {
   try {

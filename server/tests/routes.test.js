@@ -35,7 +35,7 @@ describe('Routes API', () => {
 
       expect(res.body).toHaveProperty('routes');
       expect(Array.isArray(res.body.routes)).toBe(true);
-    });
+    }, 10000);  // 10 second timeout for OSRM API call
 
     it('should require origin and destination', async () => {
       const res = await request(app)

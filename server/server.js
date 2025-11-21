@@ -89,6 +89,13 @@ app.get('/api/config', (req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
+// SPA fallback: serve index.html for routes not handled by API or static files
+app.get('*', (req, res) => {
+  // If the request starts with /api or /api-docs, let the API/Swagger handle it
+  if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) return res.status(404).end();
+  res.sendFile(path.join(clientPath, 'index.html'));
+});
+
 // Broadcast traffic updates every 8 seconds using database
 async function broadcastTrafficUpdate(io) {
   try {
