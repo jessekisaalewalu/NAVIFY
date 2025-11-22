@@ -367,12 +367,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // helper to render the traffic areas (fallback when no Google Maps)
   function renderAreas(areas){
-    // Only render areas if Google Maps is not loaded
+    // Only render areas if NO map is loaded (not Google Maps, not Leaflet)
     if(googleMapsLoaded && map){
       mapEl.classList.add('has-google-maps');
-      return; // Don't render boxes when we have a real map
+      return; // Don't render boxes when we have Google Maps
     }
+    if(leafletMap){
+      mapEl.classList.add('has-map');
+      return; // Don't render boxes when we have Leaflet map
+    }
+    
+    // Only render traffic area boxes if no map exists
     mapEl.classList.remove('has-google-maps');
+    mapEl.classList.remove('has-map');
     mapEl.innerHTML = '';
     areas.forEach(a => {
       const div = document.createElement('div');
@@ -442,6 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       debug('Displaying route on Leaflet. Origin: ' + JSON.stringify(origin) + ', Dest: ' + JSON.stringify(destination));
       debug('Route geometry type: ' + (routeGeometry ? routeGeometry.type : 'null'));
+      
+      // Validate coordinates - if missing, provide fallback
+      if((!origin || !origin.lat || !origin.lng) && (!destination || !destination.lat || !destination.lng)){
+        debug('Missing both origin and destination coordinates, centering on San Francisco');
+        leafletMap.setView([37.7749, -122.4194], 12);
+      }
       
       // Clear previous markers and route
       if(originMarker && originMarker.remove) originMarker.remove();
@@ -553,6 +566,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dashArray: '10, 10'
           }).addTo(leafletMap);
           leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [50, 50] });
+          debug('Fallback straight line route displayed');
+        } else {
+          debug('No valid coordinates available to display route. Showing default map view.');
+          leafletMap.setView([37.7749, -122.4194], 12);
         }
       }
     } catch(e) {
@@ -700,9 +717,17 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       const res = await fetch(apiUrl('/api/config'));
       const cfg = await res.json();
+      debug('loadConfig response: ' + JSON.stringify(cfg));
       if(cfg && cfg.mapsApiKey){
-        await loadGoogleMaps(cfg.mapsApiKey);
-        initMap(mapEl);
+        debug('Google Maps API key found, loading Google Maps...');
+        try {
+          await loadGoogleMaps(cfg.mapsApiKey);
+          initMap(mapEl);
+          debug('Google Maps loaded and initialized');
+        } catch(mapsError) {
+          debug('Google Maps failed to load: ' + mapsError.message + ', falling back to Leaflet');
+          initLeafletMap(mapEl);
+        }
       } else {
         debug('No Google Maps key provided; using Leaflet fallback');
         initLeafletMap(mapEl);
@@ -1076,26 +1101,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const finalDestCoords = data.dest_location || destCoords;
             
             debug('Show on Map clicked. Route geometry: ' + (r.geometry ? 'present' : 'missing'));
+            debug('Origin coords: ' + JSON.stringify(finalOriginCoords) + ', Dest coords: ' + JSON.stringify(finalDestCoords));
             
-            // Ensure map is initialized
+            // Ensure map is initialized before attempting to display
             if(!map && !leafletMap){
+              debug('Map not initialized, initializing Leaflet...');
               initLeafletMap(mapEl);
             }
             
-            // Display on Google Maps
-            if(map && googleMapsLoaded){
-              debug('Showing route on Google Maps');
-              displayRouteOnGoogleMap(finalOriginCoords, finalDestCoords, r);
-            } 
-            // Display on Leaflet
-            else if(leafletMap){
-              debug('Showing route on Leaflet');
-              // Always try to display, even if geometry is missing (will use fallback)
-              displayRouteOnLeaflet(finalOriginCoords, finalDestCoords, r.geometry);
-            } else {
-              debug('No map available');
-              alert('Map is not available. Please refresh the page.');
-            }
+            // Small delay to ensure map is ready after initialization
+            setTimeout(() => {
+              // Display on Google Maps
+              if(map && googleMapsLoaded){
+                debug('Showing route on Google Maps');
+                displayRouteOnGoogleMap(finalOriginCoords, finalDestCoords, r);
+              } 
+              // Display on Leaflet
+              else if(leafletMap){
+                debug('Showing route on Leaflet');
+                // Always try to display, even if geometry is missing (will use fallback)
+                displayRouteOnLeaflet(finalOriginCoords, finalDestCoords, r.geometry);
+              } else {
+                debug('No map available after init attempt');
+                alert('Map is not available. Please refresh the page.');
+              }
+            }, 100);
             
             // Scroll to map
             const mapPanel = document.querySelector('.map-panel');
@@ -1339,10 +1369,16 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchTraffic();
   fetchTransit();
   
-  // Initialize fallback map if Google Maps doesn't load
+  // Initialize fallback map immediately if Google Maps won't load
+  // Check if Google Maps was requested but failed
   setTimeout(() => {
     if(!map && !leafletMap){
+      debug('Map not initialized by loadConfig (likely no Google Maps API key), initializing Leaflet fallback');
       initLeafletMap(mapEl);
+    } else if(map){
+      debug('Google Maps initialized');
+    } else if(leafletMap){
+      debug('Leaflet map initialized');
     }
   }, 2000);
 

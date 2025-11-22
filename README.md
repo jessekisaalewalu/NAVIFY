@@ -1,19 +1,10 @@
-Navify — Smart Commuter
-======================
+# Navify — Smart Commuter
 
-This repository contains a small demo app with a Node/Express backend and a static frontend.
+Real-time route suggestions, traffic info, and transit data for smart commuting.
 
-Structure
----------
-- `server/` - Express backend and API
-- `client/` - Static frontend files (HTML, CSS, JS)
+## Quick Start
 
-Running frontend and backend together (recommended)
--------------------------------------------------
-The app is already configured so the backend serves the frontend static files. This is the simplest
-way to run both on the same origin (no CORS or origin issues):
-
-1. Start the backend server (it will serve the frontend at the same host/port):
+The backend serves the frontend on the same origin. No separate frontend server needed.
 
 ```powershell
 cd "d:\PERSONAL PROJECTS\NAVIFY\server"
@@ -21,42 +12,144 @@ npm install
 npm start
 ```
 
-2. Open your browser to http://localhost:3000
+Open http://localhost:3000
 
-Notes:
-- The client uses relative API URLs by default so requests are sent to the same origin that served the
-	frontend. If you must run the frontend separately during development, you can override the backend
-	origin by setting `window.__API_ORIGIN__ = 'http://localhost:3000'` before the main `js/app.js` script
-	runs (or adjust `client/js/app.js`).
-- If you want the server to be reachable from other devices on your network, consider changing the
-	listen host in `server/server.js` from `127.0.0.1` to `0.0.0.0` (be mindful of security implications).
+## Features
 
-Running the server with HTTPS (optional)
----------------------------------------
-If you want the backend served over HTTPS (so the frontend is also served as https://localhost:3000),
-you can start the server with an SSL key and certificate. The server looks for `SSL_KEY_PATH` and
-`SSL_CERT_PATH` environment variables (or `SSL_KEY` / `SSL_CERT`) containing paths to the key and cert files.
+- ✅ Real-time traffic updates via Socket.IO
+- ✅ Smart route finding (Geoapify or Google Maps)
+- ✅ User authentication & saved routes (SQLite + JWT)
+- ✅ Complete CRUD operations for routes, traffic, transit
+- ✅ Responsive web UI
+- ✅ Full test coverage (Jest + Supertest)
 
-1) Generate a self-signed certificate (OpenSSL example on Windows via PowerShell):
+## Project Structure
 
-```powershell
-cd d:\PERSONAL PROJECTS\NAVIFY\server
-mkdir ssl
-cd ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout localhost.key -out localhost.crt -subj "/CN=localhost"
+```
+NAVIFY/
+├── client/                  # Static frontend (HTML, CSS, JS)
+│   ├── index.html
+│   ├── css/style.css
+│   └── js/app.js
+├── server/                  # Express backend
+│   ├── config/database.js
+│   ├── controllers/         # API logic
+│   ├── middleware/          # Auth, validation, error handling
+│   ├── models/              # Database schemas
+│   ├── routes/api.js        # API routes
+│   ├── tests/               # Jest test suite
+│   ├── server.js            # Main server entry
+│   └── package.json
+└── README.md
 ```
 
-2) Start the server with the SSL paths:
+## Setup & Configuration
 
+### Prerequisites
+- Node.js 14+ and npm
+
+### API Keys (Optional)
+
+For real routing, configure one of these APIs via environment variables:
+
+**Geoapify (Recommended):**
 ```powershell
-$env:SSL_KEY_PATH = "d:\PERSONAL PROJECTS\NAVIFY\server\ssl\localhost.key";
-$env:SSL_CERT_PATH = "d:\PERSONAL PROJECTS\NAVIFY\server\ssl\localhost.crt";
+$env:GEOAPIFY_API_KEY="YOUR_KEY"
+```
+
+**Google Maps (Alternative):**
+```powershell
+$env:MAPS_API_KEY="YOUR_KEY"
+```
+
+**No API Key?** App runs with mock data and basic fallback routes.
+
+### Running with HTTPS
+
+To serve over HTTPS (e.g., https://localhost:3000):
+
+1. Generate a self-signed certificate:
+```powershell
+cd server
+mkdir ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ssl/localhost.key -out ssl/localhost.crt -subj "/CN=localhost"
+```
+
+2. Start with SSL env vars:
+```powershell
+$env:SSL_KEY_PATH = "path\to\server\ssl\localhost.key"
+$env:SSL_CERT_PATH = "path\to\server\ssl\localhost.crt"
 npm start
 ```
 
-Now open https://localhost:3000 in your browser (you will need to accept the self-signed cert). The
-frontend will be served from the same origin and port as the backend.
+3. Open https://localhost:3000 (accept self-signed cert in browser)
 
-Security note: self-signed certificates are fine for local development only. For production use a
-certificate issued by a trusted CA.
+## API Endpoints
 
+### Auth
+- `POST /api/auth/register` — Register user
+- `POST /api/auth/login` — Login
+- `GET /api/auth/profile` — Get profile (auth required)
+- `PUT /api/auth/profile` — Update profile (auth required)
+
+### Routes
+- `GET /api/routes?origin=...&dest=...` — Find routes
+- `POST /api/routes` — Save route (auth required)
+- `GET /api/routes/saved` — Get saved routes (auth required)
+- `GET /api/routes/saved/:id` — Get saved route (auth required)
+- `PUT /api/routes/saved/:id` — Update saved route (auth required)
+- `DELETE /api/routes/saved/:id` — Delete saved route (auth required)
+
+### Traffic
+- `GET /api/traffic` — Get all traffic areas
+- `GET /api/traffic/:id` — Get traffic area
+- `POST /api/traffic` — Create (auth required)
+- `PUT /api/traffic/:id` — Update (auth required)
+- `PUT /api/traffic` — Bulk update (auth required)
+- `DELETE /api/traffic/:id` — Delete (auth required)
+
+### Transit
+- `GET /api/transit?lat=...&lng=...` — Get transit info
+- `GET /api/transit/stops` — Get all stops
+- `POST /api/transit/stops` — Create (auth required)
+- `PUT /api/transit/stops/:id` — Update (auth required)
+- `DELETE /api/transit/stops/:id` — Delete (auth required)
+
+### Geocoding
+- `GET /api/geocode?address=...` — Geocode address
+- `GET /api/config` — Server config
+
+## Testing
+
+```powershell
+cd server
+npm test              # Run full test suite
+npm run test:watch   # Watch mode
+```
+
+Test coverage: Auth, routes, traffic, transit, CRUD operations, error handling.
+
+## Development Notes
+
+- **Frontend:** Uses relative API URLs (no CORS issues)
+- **Backend:** Express with SQLite, JWT auth, Socket.IO for real-time updates
+- **Database:** SQLite with users, routes, traffic_areas, transit_stops tables
+- **Swagger Docs:** Available at `/api-docs` when server is running
+
+## Troubleshooting
+
+**Routes not showing?**
+- Set a Geoapify or Google Maps API key
+- Restart server after setting env var
+
+**Can't find app?**
+- Ensure server is running: `npm start` (in server folder)
+- Try http://localhost:3000
+
+**Location not working?**
+- Allow location access in browser
+- Use HTTPS (some browsers require it)
+
+## License
+
+Demo project for educational purposes.
