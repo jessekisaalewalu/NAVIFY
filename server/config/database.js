@@ -86,8 +86,30 @@ function initializeDatabase() {
           console.error('Error creating transit_stops table:', err);
           reject(err);
         } else {
-          console.log('Database tables initialized successfully');
-          resolve();
+          // Trip logs table (opt-in trip logging)
+          db.run(`CREATE TABLE IF NOT EXISTS trips (
+            id TEXT PRIMARY KEY,
+            user_id INTEGER,
+            origin_lat REAL,
+            origin_lng REAL,
+            dest_lat REAL,
+            dest_lng REAL,
+            start_ts INTEGER,
+            end_ts INTEGER,
+            duration_sec INTEGER,
+            distance_km REAL,
+            anonymized INTEGER DEFAULT 1,
+            meta TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`, (err2) => {
+            if (err2) {
+              console.error('Error creating trips table:', err2);
+              reject(err2);
+            } else {
+              console.log('Database tables initialized successfully');
+              resolve();
+            }
+          });
         }
       });
     });

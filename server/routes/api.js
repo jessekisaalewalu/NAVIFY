@@ -7,6 +7,9 @@ const trafficController = require('../controllers/trafficController');
 const routeController = require('../controllers/routeController');
 const transitController = require('../controllers/transitController');
 const geocodeController = require('../controllers/geocodeController');
+const placeController = require('../controllers/placeController');
+const tripController = require('../controllers/tripController');
+const adminController = require('../controllers/adminController');
 
 // Middleware
 const { authenticate } = require('../middleware/auth');
@@ -239,6 +242,9 @@ router.put('/traffic/:id', authenticate, trafficController.updateTrafficArea);
  *         description: Traffic areas updated
  */
 router.put('/traffic', authenticate, trafficController.updateTrafficBulk);
+
+// Receive GPS pings from clients for live traffic aggregation
+router.post('/traffic/ping', trafficController.receivePing);
 
 /**
  * @swagger
@@ -495,5 +501,15 @@ router.delete('/transit/stops/:id', authenticate, transitController.deleteTransi
  *         description: Address not found
  */
 router.get('/geocode', validateGeocodeQuery, geocodeController.geocode);
+
+// Places (POI) search: q=term, optional country=ISO2, optional limit
+router.get('/places', placeController.searchPlaces);
+
+// Trip logging (opt-in)
+router.post('/trips', tripController.createTrip);
+router.get('/trips/me', authenticate, tripController.getMyTrips);
+
+// Admin summary (requires auth)
+router.get('/admin/summary', authenticate, adminController.summary);
 
 module.exports = router;

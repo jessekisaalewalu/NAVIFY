@@ -2,9 +2,9 @@ const { geocodeAddress } = require('../utils/geocode');
 
 const geocode = async (req, res, next) => {
   try {
-    const { address } = req.query;
+    const { address, country } = req.query;
 
-    const location = await geocodeAddress(address);
+    const location = await geocodeAddress(address, country);
     if (location) {
       res.json({
         address: location.address,

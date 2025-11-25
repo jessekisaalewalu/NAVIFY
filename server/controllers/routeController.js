@@ -7,13 +7,13 @@ const { geocodeAddress, parseLatLng } = require('../utils/geocode');
 const MAPS_KEY = process.env.MAPS_API_KEY || null;
 const GEOAPIFY_KEY = process.env.GEOAPIFY_API_KEY || null;
 
-async function resolveLocation(input) {
+async function resolveLocation(input, country) {
   if (!input) return null;
   const parsed = parseLatLng(input);
   if (parsed) {
     return parsed;
   }
-  return await geocodeAddress(input);
+  return await geocodeAddress(input, country);
 }
 
 // Global routing using OSRM (Open Source Routing Machine) - works worldwide, no API key needed
@@ -84,11 +84,11 @@ async function getRoutesWithOSRM(originLoc, destLoc, originName, destName) {
 
 const getRoutes = async (req, res, next) => {
   try {
-    const { origin, dest } = req.query;
+    const { origin, dest, country } = req.query;
 
     // Step 1: Resolve origin and destination to coordinates
-    let originLoc = await resolveLocation(origin);
-    let destLoc = await resolveLocation(dest);
+    let originLoc = await resolveLocation(origin, country);
+    let destLoc = await resolveLocation(dest, country);
 
     if (!originLoc) {
       return res.status(400).json({ error: 'Could not find origin address. Try a more specific address or coordinates (lat,lng).' });

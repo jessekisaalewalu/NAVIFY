@@ -38,17 +38,29 @@
         <!-- Google Maps will be rendered here if API key is provided -->
         <!-- Fallback: simple boxes representing areas -->
       </div>
+      <div id="navInstructions" class="panel nav-instructions" style="margin-top:12px;">
+        <h3>Navigation</h3>
+        <div id="instructionsList" class="instructions-list muted">No active navigation</div>
+      </div>
     </section>
 
     <section class="panel routes-panel slide-in">
       <h2>Route Suggestions</h2>
       <div id="routes" class="routes-list"></div>
       <div class="controls">
+        <div class="place-search">
+          <input id="placeSearch" placeholder="Search places (e.g. supermarket, hospital, pharmacy)" />
+          <div id="placeResults" class="place-results"></div>
+        </div>
         <input id="origin" placeholder="From (leave empty to use your location)" />
         <input id="dest" placeholder="To (destination required)" />
         <select id="countrySelect" aria-label="Country filter">
           <option value="ALL">All countries</option>
         </select>
+        <label style="display:flex;align-items:center;gap:6px;margin-left:8px;color:var(--muted);font-size:13px;">
+          <input type="checkbox" id="optInLogging" />
+          <span>Log trips (opt-in)</span>
+        </label>
         <button id="findRoutes" class="btn">Find Routes</button>
       </div>
     </section>

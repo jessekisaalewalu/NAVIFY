@@ -289,6 +289,70 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;backgroun
 /* For browsers that expose the native dropdown pane pseudo-element */
 select#countrySelect::-ms-expand{ display:none; }
 
+/* Custom dropdown (replaces native select for consistent styling) */
+.custom-select{
+  position:relative;
+  display:inline-block;
+  margin-left:8px;
+  width:260px;
+  font-size:14px;
+}
+.custom-select-button{
+  width:100%;
+  text-align:left;
+  padding:10px 12px;
+  border-radius:8px;
+  background:linear-gradient(180deg, rgba(8,14,22,0.95), rgba(2,6,23,0.9));
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.custom-select-button:focus{ outline:2px solid var(--accent); }
+.custom-select-arrow{ font-size:12px; opacity:0.9 }
+.custom-select-list{
+  position:absolute;
+  top:calc(100% + 6px);
+  left:0;
+  right:0;
+  max-height:260px;
+  overflow:auto;
+  background:linear-gradient(180deg, rgba(10,18,26,0.98), rgba(2,6,23,0.98));
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.06);
+  z-index:2000;
+  box-shadow:0 12px 40px rgba(0,0,0,0.6);
+}
+.custom-select-item{
+  padding:8px 12px;
+  color:var(--text);
+  cursor:pointer;
+}
+.custom-select-item:hover, .custom-select-item[aria-selected="true"], .custom-select-item.active{
+  background:rgba(0,212,255,0.06);
+  color:var(--accent);
+}
+.custom-select-empty{ padding:10px 12px; color:var(--muted); }
+
+/* Place search results */
+.place-results{max-height:220px;overflow:auto;margin-top:8px;border-radius:8px;padding:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+.place-result{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;border-bottom:1px solid rgba(255,255,255,0.02)}
+.place-result .place-name{font-weight:600}
+.place-result .place-type{font-size:12px}
+.place-actions{display:flex;gap:8px}
+
+.nav-control{position:fixed;right:18px;bottom:18px;background:linear-gradient(180deg,#031420,#06222a);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:9999;display:flex;gap:10px;align-items:center}
+
+/* Navigation instructions panel */
+.nav-instructions{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+.instructions-list{max-height:220px;overflow:auto;padding:6px}
+.instruction-item{padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);margin-bottom:6px}
+.instruction-item.upcoming{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(0,212,255,0.02));border:1px solid rgba(0,212,255,0.06)}
+
+
+
 /* small responsive */
 @media (max-width:900px){
   .container{grid-template-columns:1fr; padding:12px}

@@ -191,10 +191,16 @@ async function startServer() {
     }
 
     // Setup Socket.IO after server is created
-    const io = setupSocketIO(server);
+      const io = setupSocketIO(server);
 
-    // Start traffic update interval
-    setInterval(() => broadcastTrafficUpdate(io), 8000);
+      // Periodically aggregate incoming GPS pings into traffic areas and broadcast
+      const { aggregatePings } = require('./controllers/trafficController');
+      setInterval(async () => {
+        try{
+          await aggregatePings();
+        }catch(e){ console.error('Periodic aggregatePings failed', e); }
+        broadcastTrafficUpdate(io);
+      }, 8000);
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

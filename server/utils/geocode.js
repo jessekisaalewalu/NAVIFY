@@ -3,13 +3,16 @@ const axios = require('axios');
 const MAPS_KEY = process.env.MAPS_API_KEY || null;
 const GEOAPIFY_KEY = process.env.GEOAPIFY_API_KEY || null;
 
-async function geocodeWithGoogle(address) {
+async function geocodeWithGoogle(address, country) {
   if (!MAPS_KEY) return null;
   try {
     const geocodeUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
-    const response = await axios.get(geocodeUrl, {
-      params: { address, key: MAPS_KEY }
-    });
+    const params = { address, key: MAPS_KEY };
+    // If a country code (ISO2) is provided, use components to bias to that country
+    if (country && country.length === 2) {
+      params.components = `country:${country}`;
+    }
+    const response = await axios.get(geocodeUrl, { params });
     if (response.data.status === 'OK' && response.data.results.length > 0) {
       const result = response.data.results[0];
       return {
@@ -24,13 +27,16 @@ async function geocodeWithGoogle(address) {
   return null;
 }
 
-async function geocodeWithGeoapify(address) {
+async function geocodeWithGeoapify(address, country) {
   if (!GEOAPIFY_KEY) return null;
   try {
     const geocodeUrl = 'https://api.geoapify.com/v1/geocode/search';
-    const response = await axios.get(geocodeUrl, {
-      params: { text: address, apiKey: GEOAPIFY_KEY, limit: 1 }
-    });
+    const params = { text: address, apiKey: GEOAPIFY_KEY, limit: 1 };
+    // Geoapify supports filtering by country code
+    if (country && country.length === 2) {
+      params.filter = `countrycode:${country.toLowerCase()}`;
+    }
+    const response = await axios.get(geocodeUrl, { params });
     if (response.data.features && response.data.features.length > 0) {
       const feature = response.data.features[0];
       return {
@@ -45,14 +51,17 @@ async function geocodeWithGeoapify(address) {
   return null;
 }
 
-async function geocodeWithNominatim(address) {
+async function geocodeWithNominatim(address, country) {
   try {
+    const params = {
+      format: 'json',
+      q: address,
+      limit: 1
+    };
+    // Nominatim supports countrycodes (comma-separated ISO2)
+    if (country && country.length === 2) params.countrycodes = country.toLowerCase();
     const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-      params: {
-        format: 'json',
-        q: address,
-        limit: 1
-      },
+      params,
       headers: {
         'User-Agent': 'NavifyApp/1.0'
       }
@@ -71,11 +80,12 @@ async function geocodeWithNominatim(address) {
   return null;
 }
 
-async function geocodeAddress(address) {
+async function geocodeAddress(address, country) {
+  // Try providers in order, passing country where supported
   return (
-    (await geocodeWithGeoapify(address)) ||
-    (await geocodeWithGoogle(address)) ||
-    (await geocodeWithNominatim(address))
+    (await geocodeWithGeoapify(address, country)) ||
+    (await geocodeWithGoogle(address, country)) ||
+    (await geocodeWithNominatim(address, country))
   );
 }
 
