@@ -90,9 +90,14 @@ app.get('/api/config', (req, res) => {
 app.use(errorHandler);
 
 // SPA fallback: serve index.html for routes not handled by API or static files
-app.get('*', (req, res) => {
-  // If the request starts with /api or /api-docs, let the API/Swagger handle it
-  if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) return res.status(404).end();
+// Use '/*' instead of '*' to avoid path-to-regexp parameter parsing error
+// Final SPA fallback: serve index.html for non-API GET requests.
+// Use an unscoped middleware (app.use) to avoid path-to-regexp parsing issues
+app.use((req, res, next) => {
+  // Let API and Swagger routes be handled elsewhere
+  if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) return next();
+  // Only respond to GET requests for SPA navigation
+  if (req.method !== 'GET') return next();
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 

@@ -268,15 +268,26 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;backgroun
   padding:10px 12px;
   border-radius:8px;
   border:1px solid rgba(255,255,255,0.06);
-  background:rgba(255,255,255,0.02);
-  color:inherit;
+  background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.4));
+  color:var(--text);
   font-size:14px;
   margin-left:8px;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .controls select#countrySelect:focus{
   outline:2px solid var(--accent);
   outline-offset:2px;
 }
+
+/* Dropdown option styling (may be limited by browser) */
+.controls select#countrySelect option{
+  background: linear-gradient(180deg, rgba(10,18,26,0.95), rgba(2,6,23,0.95));
+  color: var(--text);
+}
+
+/* For browsers that expose the native dropdown pane pseudo-element */
+select#countrySelect::-ms-expand{ display:none; }
 
 /* small responsive */
 @media (max-width:900px){

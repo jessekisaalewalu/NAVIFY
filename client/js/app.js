@@ -102,26 +102,46 @@ function loadGoogleMaps(key){
   async function loadCountries(selectEl){
     if(!selectEl) return;
     try{
-      // Try to load cached list first
-      const cached = localStorage.getItem('countriesList');
-      let countries = cached ? JSON.parse(cached) : null;
-      if(!countries){
-        const res = await fetch('https://restcountries.com/v3.1/all');
-        const data = await res.json();
-        countries = data.map(c => ({ name: c.name.common, code: c.cca2 })).filter(c=>c.code);
+        // Try to load cached list first
+        const cached = localStorage.getItem('countriesList');
+        let countries = cached ? JSON.parse(cached) : null;
+
+        // If not cached, try local static file first for reliability
+        if(!countries){
+          try{
+            const localRes = await fetch('/data/countries.json');
+            if(localRes.ok){
+              const localData = await localRes.json();
+              countries = localData.map(c=>({ name: c.name, code: c.code }));
+            }
+          }catch(errLocal){
+            // ignore and try remote
+          }
+        }
+
+        // If still not found, fallback to remote REST Countries API
+        if(!countries){
+          const res = await fetch('https://restcountries.com/v3.1/all');
+          const data = await res.json();
+          countries = data.map(c => ({ name: c.name.common, code: c.cca2 })).filter(c=>c.code);
+        }
+
+        // Normalize and cache
+        countries = countries.map(c=>({ name: c.name, code: (c.code || '').toUpperCase() })).filter(c=>c.code);
         countries.sort((a,b)=>a.name.localeCompare(b.name));
         localStorage.setItem('countriesList', JSON.stringify(countries));
+
+        // Populate select
+        selectEl.innerHTML = '<option value="ALL">All countries</option>' + countries.map(c=>`<option value="${c.code}">${c.name}</option>`).join('');
+
+        // Restore previously selected country
+        const sel = localStorage.getItem('selectedCountry');
+        if(sel){ selectEl.value = sel; }
+      }catch(e){
+        console.warn('Could not load countries list, leaving selector with default', e);
+        // Ensure at least the default option exists
+        selectEl.innerHTML = '<option value="ALL">All countries</option>';
       }
-
-      // Populate select
-      selectEl.innerHTML = '<option value="ALL">All countries</option>' + countries.map(c=>`<option value="${c.code}">${c.name}</option>`).join('');
-
-      // Restore previously selected country
-      const sel = localStorage.getItem('selectedCountry');
-      if(sel){ selectEl.value = sel; }
-    }catch(e){
-      console.warn('Could not load countries list, leaving selector with default', e);
-    }
   }
 
 function initMap(mapEl){
