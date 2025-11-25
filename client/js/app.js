@@ -98,6 +98,32 @@ function loadGoogleMaps(key){
   });
 }
 
+  // Load list of countries (uses restcountries API) and populate the country selector
+  async function loadCountries(selectEl){
+    if(!selectEl) return;
+    try{
+      // Try to load cached list first
+      const cached = localStorage.getItem('countriesList');
+      let countries = cached ? JSON.parse(cached) : null;
+      if(!countries){
+        const res = await fetch('https://restcountries.com/v3.1/all');
+        const data = await res.json();
+        countries = data.map(c => ({ name: c.name.common, code: c.cca2 })).filter(c=>c.code);
+        countries.sort((a,b)=>a.name.localeCompare(b.name));
+        localStorage.setItem('countriesList', JSON.stringify(countries));
+      }
+
+      // Populate select
+      selectEl.innerHTML = '<option value="ALL">All countries</option>' + countries.map(c=>`<option value="${c.code}">${c.name}</option>`).join('');
+
+      // Restore previously selected country
+      const sel = localStorage.getItem('selectedCountry');
+      if(sel){ selectEl.value = sel; }
+    }catch(e){
+      console.warn('Could not load countries list, leaving selector with default', e);
+    }
+  }
+
 function initMap(mapEl){
   if(!googleMapsLoaded) return;
   mapEl.classList.add('has-google-maps');
@@ -358,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const findRoutesBtn = document.getElementById('findRoutes');
   const originIn = document.getElementById('origin');
   const destIn = document.getElementById('dest');
+  const countrySelect = document.getElementById('countrySelect');
   
   // Restore user session
   if (localStorage.getItem('currentUser')) {
@@ -391,6 +418,15 @@ document.addEventListener('DOMContentLoaded', () => {
       bar.appendChild(fill);
       div.appendChild(name); div.appendChild(cong); div.appendChild(bar);
       mapEl.appendChild(div);
+    });
+  }
+
+  // Populate countries selector and persist selection
+  if(countrySelect){
+    loadCountries(countrySelect).then(()=>{
+      countrySelect.addEventListener('change', ()=>{
+        localStorage.setItem('selectedCountry', countrySelect.value);
+      });
     });
   }
 
@@ -938,7 +974,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fallback to server API
     debug('findRoutes using server API');
     try{
-      const res = await fetch(apiUrl(`/api/routes?origin=${encodeURIComponent(originVal)}&dest=${encodeURIComponent(destVal)}`));
+      // include optional country filter when provided
+      const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
+      const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
+      const res = await fetch(apiUrl(`/api/routes?origin=${encodeURIComponent(originVal)}&dest=${encodeURIComponent(destVal)}${countryQuery}`));
       const data = await res.json();
       debug('findRoutes: got ' + (data.routes && data.routes.length));
       
@@ -960,7 +999,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Try to geocode if we have addresses
       if(originVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(originVal)){
         try {
-          const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(originVal)}`));
+          const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
+          const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
+          const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(originVal)}${countryQuery}`));
           const geoData = await geoRes.json();
           if(geoData.location) originCoords = geoData.location;
         } catch(e) {
@@ -975,7 +1016,9 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if(destVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(destVal)){
         try {
-          const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(destVal)}`));
+          const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
+          const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
+          const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(destVal)}${countryQuery}`));
           const geoData = await geoRes.json();
           if(geoData.location) destCoords = geoData.location;
         } catch(e) {
