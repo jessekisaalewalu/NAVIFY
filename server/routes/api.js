@@ -9,7 +9,8 @@ const transitController = require('../controllers/transitController');
 const geocodeController = require('../controllers/geocodeController');
 const placeController = require('../controllers/placeController');
 const tripController = require('../controllers/tripController');
-const adminController = require('../controllers/adminController');
+const googleController = require('../controllers/googleController');
+// adminController removed — admin summary feature disabled per user request
 
 // Middleware
 const { authenticate } = require('../middleware/auth');
@@ -505,11 +506,14 @@ router.get('/geocode', validateGeocodeQuery, geocodeController.geocode);
 // Places (POI) search: q=term, optional country=ISO2, optional limit
 router.get('/places', placeController.searchPlaces);
 
+// Google Places proxy (requires MAPS_API_KEY on server)
+router.get('/google/places', googleController.places);
+router.get('/google/photo', googleController.photo);
+
 // Trip logging (opt-in)
 router.post('/trips', tripController.createTrip);
 router.get('/trips/me', authenticate, tripController.getMyTrips);
 
-// Admin summary (requires auth)
-router.get('/admin/summary', authenticate, adminController.summary);
+// Admin summary route removed
 
 module.exports = router;

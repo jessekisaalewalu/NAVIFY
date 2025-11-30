@@ -4,15 +4,49 @@ Real-time route suggestions, traffic info, and transit data for smart commuting.
 
 ## Quick Start
 
-The backend serves the frontend on the same origin. No separate frontend server needed.
+The frontend and backend run as separate servers for better separation of concerns.
+
+### Starting the Backend Server
 
 ```powershell
-cd "d:\PERSONAL PROJECTS\NAVIFY\server"
+cd server
 npm install
 npm start
 ```
 
-Open http://localhost:3000
+Backend runs at http://localhost:3000
+
+### Starting the Frontend Server
+
+Open a new terminal:
+
+```powershell
+cd client
+npm install
+npm start
+```
+
+Frontend runs at http://localhost:3001
+
+The frontend will automatically connect to the backend at http://localhost:3000.
+
+### Custom Backend URL
+
+To point the frontend to a different backend URL:
+
+```powershell
+$env:BACKEND_URL="http://your-backend-url:port"
+cd client
+npm start
+```
+
+Or set `FRONTEND_URL` environment variable on the backend to configure CORS:
+
+```powershell
+$env:FRONTEND_URL="http://localhost:3001"
+cd server
+npm start
+```
 
 ## Features
 

@@ -163,25 +163,9 @@ function setStatus(text, color){ if(statusEl){ statusEl.textContent = text; stat
 setStatus('connecting...');
 
 function ensureDebug(){
-  let d = document.getElementById('debugBox');
-  if(!d){
-    d = document.createElement('pre');
-    d.id = 'debugBox';
-    d.style.position = 'fixed';
-    d.style.right = '12px';
-    d.style.bottom = '12px';
-    d.style.background = 'rgba(2,6,23,0.6)';
-    d.style.color = '#9fbccf';
-    d.style.padding = '8px 10px';
-    d.style.borderRadius = '8px';
-    d.style.fontSize = '12px';
-    d.style.maxWidth = '360px';
-    d.style.maxHeight = '220px';
-    d.style.overflow = 'auto';
-    d.style.zIndex = 9999;
-    document.body.appendChild(d);
-  }
-  return d;
+  // Debug panel removed: return null so no bottom-right time/debug box is created.
+  // Debug logging still goes to console; debug() is a no-op for DOM output.
+  return null;
 }
 const debugEl = ensureDebug();
 function debug(msg){ try{ console.log('[DEBUG]', msg); debugEl.textContent = `${new Date().toLocaleTimeString()} - ${msg}\n` + debugEl.textContent.slice(0,2000); }catch(e){} }
@@ -292,7 +276,7 @@ function initMap(mapEl){
       const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       userLocation = p;
       map.setCenter(p);
-      map.setZoom(14);
+      map.setZoom(15);
       userMarker = new google.maps.Marker({ 
         position: p, 
         map, 
@@ -574,6 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
       try{ initCustomCountrySelect(countrySelect); }catch(e){ console.warn('custom country select init failed', e); }
       countrySelect.addEventListener('change', ()=>{
         localStorage.setItem('selectedCountry', countrySelect.value);
+        // Update dashboard content based on new country selection
+        try{ updateDashboardForCountry(countrySelect.value); }catch(e){ debug('updateDashboardForCountry error: '+e.message); }
       });
     });
   }
@@ -752,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bounds = routePolyline.getBounds();
             if(origin && origin.lat) bounds.extend([origin.lat, origin.lng]);
             if(destination && destination.lat) bounds.extend([destination.lat, destination.lng]);
-            leafletMap.fitBounds(bounds, { padding: [50, 50] });
+            leafletMap.fitBounds(bounds, { padding: [30, 30] });
             debug('Map fitted to route bounds');
           } else {
             debug('Could not extract valid coordinates from geometry');
@@ -764,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 opacity: 0.9,
                 dashArray: '10, 10'
               }).addTo(leafletMap);
-              leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [50, 50] });
+              leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [30, 30] });
             }
           }
         } else {
@@ -778,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
               opacity: 0.9,
               dashArray: '10, 10'
             }).addTo(leafletMap);
-            leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [50, 50] });
+            leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [30, 30] });
           }
         }
       } else {
@@ -792,7 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 0.9,
             dashArray: '10, 10'
           }).addTo(leafletMap);
-          leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [50, 50] });
+            leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [30, 30] });
           debug('Fallback straight line route displayed');
         } else {
           debug('No valid coordinates available to display route. Showing default map view.');
@@ -891,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
           path.forEach(point => bounds.extend(point));
           if(origin && origin.lat) bounds.extend({ lat: origin.lat, lng: origin.lng });
           if(destination && destination.lat) bounds.extend({ lat: destination.lat, lng: destination.lng });
-          map.fitBounds(bounds);
+          map.fitBounds(bounds, 40);
         } else if(routeData.polyline){
           // Google Maps polyline
           function decodePolyline(encoded) {
@@ -933,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const bounds = new google.maps.LatLngBounds();
           decodedPath.forEach(point => bounds.extend(point));
-          map.fitBounds(bounds);
+          map.fitBounds(bounds, 40);
         }
       }
     } catch(e) {
@@ -987,10 +973,160 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateAnalytics(areas){
-    const avg = Math.round(areas.reduce((s,a)=>s+a.congestion,0)/areas.length);
-    const hotspots = areas.filter(a=>a.congestion>60).map(a=>a.name).join(', ') || 'None';
-    avgEtaEl.textContent = Math.round(10 + avg/6);
-    hotspotsEl.textContent = hotspots;
+    // Dashboard analytics removed: keep this function as a noop so older calls don't break.
+    return;
+  }
+
+  // --- Dashboard slideshow and country-aware place slides ---
+  const dashboardEl = document.getElementById('dashboardContent');
+  let slideshowState = { slides: [], idx: 0, timer: null };
+
+  function createPromoSlides(){
+    return [
+      { img: 'https://source.unsplash.com/800x450/?map,city', title: 'Smart routing', text: 'Find the best routes with live traffic and turn-by-turn guidance.' },
+      { img: 'https://source.unsplash.com/800x450/?commute,traffic', title: 'Real-time traffic', text: 'GPS-powered congestion insights help you avoid delays.' },
+      { img: 'https://source.unsplash.com/800x450/?hospital,pharmacy', title: 'Find places', text: 'Search for supermarkets, hospitals, universities and more — globally.' },
+      { img: 'https://source.unsplash.com/800x450/?public,transport', title: 'Transit info', text: 'Quickly see next departures and nearby stops where available.' }
+    ];
+  }
+
+  function buildSlidesHtml(slides){
+    const wrap = document.createElement('div'); wrap.className = 'slideshow';
+    slides.forEach((s, i)=>{
+      const slide = document.createElement('div'); slide.className = 'slide' + (i===0 ? ' active' : '');
+      // Add a subtle background to the slide as a fallback while image loads
+      slide.style.background = 'linear-gradient(180deg, rgba(7,16,33,0.6), rgba(5,32,51,0.6))';
+      const img = document.createElement('img'); img.alt = s.title || 'Slide';
+
+      // Preload the image and set src only if it loads; otherwise use placeholder
+      try{
+        const preload = new Image();
+        preload.crossOrigin = 'anonymous';
+        // Cache buster to help with fresh fetches during development
+        const cb = Date.now();
+        const src = (s.img || '').includes('?') ? `${s.img}&cb=${cb}` : `${s.img}?cb=${cb}`;
+        preload.onload = () => { img.src = src; };
+        preload.onerror = () => { img.src = generatePlaceholderDataUrl(s.title || '', s.text || ''); };
+        preload.src = src;
+      }catch(e){ img.src = generatePlaceholderDataUrl(s.title || '', s.text || ''); }
+
+      const cap = document.createElement('div'); cap.className = 'slide-caption';
+      cap.innerHTML = `<h4>${s.title || ''}</h4><p>${s.text || ''}</p>`;
+      slide.appendChild(img); slide.appendChild(cap);
+      wrap.appendChild(slide);
+    });
+    // controls
+    const controls = document.createElement('div'); controls.className = 'slide-controls';
+    const prev = document.createElement('button'); prev.textContent = '◀';
+    const next = document.createElement('button'); next.textContent = '▶';
+    prev.addEventListener('click', ()=>{ showSlide(slideshowState.idx - 1); });
+    next.addEventListener('click', ()=>{ showSlide(slideshowState.idx + 1); });
+    controls.appendChild(prev); controls.appendChild(next);
+    const container = document.createElement('div'); container.appendChild(wrap); container.appendChild(controls);
+    return { container, wrap };
+  }
+
+  // Generate a simple SVG placeholder encoded as a data URL
+  function generatePlaceholderDataUrl(title, subtitle){
+    const w = 1200, h = 675;
+    const bg = '#0b1320';
+    const accent = '#00d4ff';
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
+        <defs>
+          <linearGradient id='g' x1='0' x2='1'>
+            <stop offset='0' stop-color='#071021'/>
+            <stop offset='1' stop-color='#052033'/>
+          </linearGradient>
+        </defs>
+        <rect width='100%' height='100%' fill='url(#g)' />
+        <rect x='40' y='${h-220}' width='${w-80}' height='160' rx='12' fill='rgba(0,0,0,0.32)' />
+        <text x='80' y='${h-140}' font-family='Arial, Helvetica, sans-serif' font-size='36' fill='${accent}'>${escapeXml(title)}</text>
+        <text x='80' y='${h-100}' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='rgba(255,255,255,0.9)'>${escapeXml(subtitle)}</text>
+      </svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+
+  function escapeXml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  function showSlide(i){
+    if(!slideshowState.slides || slideshowState.slides.length===0) return;
+    const len = slideshowState.slides.length;
+    let idx = ((i % len) + len) % len;
+    slideshowState.idx = idx;
+    const nodes = slideshowState.wrap.querySelectorAll('.slide');
+    nodes.forEach((n, k)=> n.classList.toggle('active', k===idx));
+  }
+
+  function startSlideshow(slides, interval = 4000){
+    stopSlideshow();
+    slideshowState.slides = slides;
+    const html = buildSlidesHtml(slides);
+    // clear dashboard and place slideshow
+    if(!dashboardEl) return;
+    dashboardEl.innerHTML = '';
+    dashboardEl.appendChild(html.container);
+    slideshowState.wrap = html.wrap;
+    showSlide(0);
+    slideshowState.timer = setInterval(()=> showSlide(slideshowState.idx + 1), interval);
+  }
+
+  function stopSlideshow(){
+    if(slideshowState.timer){ clearInterval(slideshowState.timer); slideshowState.timer = null; }
+  }
+
+  async function updateDashboardForCountry(code){
+    // If no country or ALL, show promo content
+    if(!code || code === 'ALL'){
+      const slides = createPromoSlides();
+      startSlideshow(slides, 4500);
+      return;
+    }
+
+    // For a selected country, fetch some sample places for common categories
+    const types = ['supermarket','hospital','pharmacy','university','police station'];
+    const slides = [];
+    for(const t of types){
+      try{
+        // First try Google Places if server supports it
+        let used = false;
+        try{
+          const gRes = await fetch(apiUrl(`/api/google/places?query=${encodeURIComponent(t + ' in ' + code)}&country=${encodeURIComponent(code)}`));
+          if(gRes.ok){
+            const gData = await gRes.json();
+            const gp = (gData.results && gData.results.length>0) ? gData.results[0] : null;
+            if(gp){
+              const title = gp.name || t;
+              const text = gp.formatted_address || t;
+              if(gp.photos && gp.photos.length>0 && gp.photos[0].photo_reference){
+                const ref = gp.photos[0].photo_reference;
+                const img = apiUrl(`/api/google/photo?ref=${encodeURIComponent(ref)}&maxwidth=900`);
+                slides.push({ img, title, text });
+                used = true;
+              } else {
+                // No photos in Google result; still add a slide with Unsplash fallback
+                const q = encodeURIComponent(gp.name || t);
+                const img = `https://source.unsplash.com/800x450/?${q}`;
+                slides.push({ img, title, text });
+                used = true;
+              }
+            }
+          }
+        }catch(ge){ debug('google places fetch failed: '+ge.message); }
+
+        if(!used){
+          // Fallback to existing searchPlaces (Geoapify/Nominatim) and Unsplash
+          const results = await searchPlaces(t);
+          const p = (results && results.length>0) ? results[0] : null;
+          const title = p ? (p.name || t) : t;
+          const q = encodeURIComponent(p ? (p.name || t) : `${t} ${code}`);
+          const img = `https://source.unsplash.com/800x450/?${q}`;
+          const text = p ? (p.address || p.label || (p.category || t)) : `Explore ${t} in ${code}`;
+          slides.push({ img, title, text });
+        }
+      }catch(e){ debug('updateDashboardForCountry error: '+e.message); }
+    }
+    if(slides.length === 0){ startSlideshow(createPromoSlides()); } else { startSlideshow(slides); }
   }
 
   // --- Places search and basic navigation helpers ---
@@ -1391,7 +1527,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = div.querySelector('.show-map');
             btn.addEventListener('click', ()=>{
               directionsRenderer.setDirections({ routes: [r] });
-              map.fitBounds(r.bounds);
+              try{ map.fitBounds(r.bounds, 40); }catch(e){ map.fitBounds(r.bounds); }
               // Highlight selected route
               document.querySelectorAll('.route-item').forEach(item => item.classList.remove('selected'));
               div.classList.add('selected');
@@ -1869,31 +2005,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   updateAuthUI();
 
-  // Admin summary button (visible when logged in)
-  const analyticsPanel = document.querySelector('.analytics-panel');
-  if(analyticsPanel){
-    const adminBtn = document.createElement('button');
-    adminBtn.className = 'btn';
-    adminBtn.style.marginLeft = '8px';
-    adminBtn.textContent = 'Admin Summary';
-    adminBtn.addEventListener('click', async ()=>{
-      if(!authToken){ alert('Please login as admin'); return; }
-      try{
-        const res = await fetch(apiUrl('/api/admin/summary'), { headers: { 'Authorization': `Bearer ${authToken}` } });
-        const data = await res.json();
-        let html = `<div><strong>Trips:</strong> ${data.trips} • <strong>Avg duration:</strong> ${Math.round((data.avgDurationSec||0)/60)} min • <strong>Avg distance:</strong> ${data.avgDistanceKm} km</div>`;
-        html += '<div style="margin-top:8px"><strong>Top hotspots</strong><ul>' + (data.hotspots||[]).map(h=>`<li>${h.name} — ${h.congestion}%</li>`).join('') + '</ul></div>';
-        analyticsPanel.querySelector('.note').innerHTML = html;
-      }catch(e){ debug('admin summary failed: '+e.message); alert('Failed to load admin summary'); }
-    });
-    const navActions = document.querySelector('.nav-actions');
-    if(navActions) navActions.appendChild(adminBtn);
-  }
+  // Admin summary removed per user request.
 
   // initial load
   loadConfig();
   fetchTraffic();
   fetchTransit();
+  // initialize dashboard slideshow based on current selection
+  setTimeout(()=>{
+    const sel = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
+    try{ updateDashboardForCountry(sel); }catch(e){ debug('initial dashboard update error: '+e.message); }
+  }, 600);
   
   // Initialize fallback map immediately if Google Maps won't load
   // Check if Google Maps was requested but failed

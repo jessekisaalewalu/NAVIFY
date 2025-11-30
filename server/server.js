@@ -3,7 +3,6 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 const https = require('https');
 const fs = require('fs');
-const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
@@ -52,26 +51,32 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Allow requests from the frontend Live Server and local dev origins
-// Allow CORS from common dev origins. In development allow any origin to ease local testing.
+// CORS configuration for separate frontend and backend
+// Allow requests from the frontend portal and common dev origins
+const allowedOrigins = [];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+if (process.env.FRONTENDLINK) {
+  allowedOrigins.push(process.env.FRONTENDLINK);
+}
+// Common development origins
+allowedOrigins.push('http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:5500', 'http://127.0.0.1:5500');
+
 if (process.env.NODE_ENV === 'production') {
   app.use(cors({
-    origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000'],
+    origin: allowedOrigins.length > 0 ? allowedOrigins : ['http://localhost:3001'],
     methods: ['GET','POST','PUT','DELETE'],
     credentials: true
   }));
 } else {
   app.use(cors({
-    origin: true, // reflect request origin
+    origin: true, // reflect request origin (allows any origin in development)
     methods: ['GET','POST','PUT','DELETE'],
     credentials: true
   }));
 }
 app.use(express.json());
-
-// Serve client static files
-const clientPath = path.join(__dirname, '..', 'client');
-app.use('/', express.static(clientPath));
 
 // API router
 app.use('/api', apiRouter);
@@ -88,18 +93,6 @@ app.get('/api/config', (req, res) => {
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
-
-// SPA fallback: serve index.html for routes not handled by API or static files
-// Use '/*' instead of '*' to avoid path-to-regexp parameter parsing error
-// Final SPA fallback: serve index.html for non-API GET requests.
-// Use an unscoped middleware (app.use) to avoid path-to-regexp parsing issues
-app.use((req, res, next) => {
-  // Let API and Swagger routes be handled elsewhere
-  if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) return next();
-  // Only respond to GET requests for SPA navigation
-  if (req.method !== 'GET') return next();
-  res.sendFile(path.join(clientPath, 'index.html'));
-});
 
 // Broadcast traffic updates every 8 seconds using database
 async function broadcastTrafficUpdate(io) {
@@ -122,11 +115,20 @@ async function broadcastTrafficUpdate(io) {
 }
 
 function setupSocketIO(server) {
-  // Initialize Socket.IO with CORS policy to allow Live Server origins
+  // Initialize Socket.IO with CORS policy to allow frontend origins
+  const socketOrigins = [];
+  if (process.env.FRONTEND_URL) {
+    socketOrigins.push(process.env.FRONTEND_URL);
+  }
+  if (process.env.FRONTENDLINK) {
+    socketOrigins.push(process.env.FRONTENDLINK);
+  }
+  socketOrigins.push('http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:5500', 'http://127.0.0.1:5500');
+  
   const io = new Server(server, {
     cors: {
       origin: process.env.NODE_ENV === 'production'
-        ? ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000']
+        ? (socketOrigins.length > 0 ? socketOrigins : ['http://localhost:3001'])
         : true,
       methods: ['GET','POST']
     }
@@ -176,17 +178,23 @@ async function startServer() {
         const key = fs.readFileSync(keyPath);
         const cert = fs.readFileSync(certPath);
         server = https.createServer({ key, cert }, app).listen(PORT, HOST, () => {
-          console.log(`Server running at https://${HOST}:${PORT}`);
+          console.log(`Backend API server running at https://${HOST}:${PORT}`);
+          console.log(`API Documentation available at https://${HOST}:${PORT}/api-docs`);
+          console.log(`\nNote: Frontend should be started separately. See README.md for instructions.`);
         });
       } catch (err) {
         console.error('Failed to read SSL key/cert, falling back to HTTP:', err.message);
         server = app.listen(PORT, HOST, () => {
-          console.log(`Server running at http://${HOST}:${PORT}`);
+          console.log(`Backend API server running at http://${HOST}:${PORT}`);
+          console.log(`API Documentation available at http://${HOST}:${PORT}/api-docs`);
+          console.log(`\nNote: Frontend should be started separately. See README.md for instructions.`);
         });
       }
     } else {
       server = app.listen(PORT, HOST, () => {
-        console.log(`Server running at http://${HOST}:${PORT}`);
+        console.log(`Backend API server running at http://${HOST}:${PORT}`);
+        console.log(`API Documentation available at http://${HOST}:${PORT}/api-docs`);
+        console.log(`\nNote: Frontend should be started separately. See README.md for instructions.`);
       });
     }
 
