@@ -22,7 +22,8 @@
     "socket.io": "^4.7.1",
     "sqlite3": "^5.1.6",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "debug": "4.3.4"
   },
   "devDependencies": {
     "jest": "^29.7.0",
