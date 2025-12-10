@@ -4,24 +4,41 @@
 // mark that JS is enabled so CSS can show slide animations
 document.documentElement.classList.add('js');
 
-// Use relative API URLs by default so frontend and backend can be served from the same host.
-// If you are running the frontend separately during development and need to point
-// to a different backend, set `window.__API_ORIGIN__ = 'http://localhost:3000'` before
-// this script runs or change this value here.
-const SERVER_ORIGIN = "http://localhost:3001" || '';
-function apiUrl(path){ return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path; }
+// FIXED: Proper configuration for backend origin
+// Use window.__API_ORIGIN__ if set (for custom config), otherwise default to localhost:3001
+const SERVER_ORIGIN = window.__API_ORIGIN__ || 'http://localhost:3001';
+
+function apiUrl(path){ 
+  return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path; 
+}
 
 // Authentication state
 let authToken = localStorage.getItem('authToken');
 let currentUser = null;
 function getAuthHeaders() {
-  return authToken ? { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+  return authToken ? { 
+    'Authorization': `Bearer ${authToken}`, 
+    'Content-Type': 'application/json' 
+  } : { 
+    'Content-Type': 'application/json' 
+  };
 }
 
-// create socket if `io` is available, otherwise null
+// FIXED: Socket.io will now properly connect to your backend at port 3001
 let socket = null;
 if(typeof io !== 'undefined'){
-  try{ socket = (SERVER_ORIGIN === '') ? io() : io(SERVER_ORIGIN); }catch(e){ console.warn('socket init failed', e); socket = null; }
+  try{ 
+    socket = io(SERVER_ORIGIN, {
+      transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    }); 
+    console.log('Socket.io connecting to:', SERVER_ORIGIN);
+  } catch(e){ 
+    console.warn('socket init failed', e); 
+    socket = null; 
+  }
 } else {
   console.warn('socket.io client not loaded; continuing without realtime');
 }
