@@ -8,7 +8,7 @@ document.documentElement.classList.add('js');
 // If you are running the frontend separately during development and need to point
 // to a different backend, set `window.__API_ORIGIN__ = 'http://localhost:3000'` before
 // this script runs or change this value here.
-const SERVER_ORIGIN = window.__API_ORIGIN__ || '';
+const SERVER_ORIGIN = "http://localhost:3001" || '';
 function apiUrl(path){ return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path; }
 
 // Authentication state
