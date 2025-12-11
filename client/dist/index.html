@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Navify — Smart Commuter</title>
+  <!-- Leaflet CSS for fallback map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Load socket.io client from CDN (fallback to ensure `io` exists even if backend is down) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/socket.io@4.7.1/client-dist/socket.io.min.js"></script>
+  <!-- Leaflet JS for fallback map -->
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="js/app.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CpexWCso.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+  <img src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%20120'%3e%3cdefs%3e%3clinearGradient%20id='g'%20x1='0'%20x2='1'%20y1='0'%20y2='1'%3e%3cstop%20offset='0'%20stop-color='%2300d4ff'/%3e%3cstop%20offset='1'%20stop-color='%237cf59b'/%3e%3c/linearGradient%3e%3c/defs%3e%3crect%20width='120'%20height='120'%20rx='22'%20fill='%2304182a'/%3e%3cpath%20d='M30%2080%20L50%2040%20L70%2080%20L90%2030'%20fill='none'%20stroke='url(%23g)'%20stroke-width='8'%20stroke-linecap='round'%20stroke-linejoin='round'/%3e%3c/svg%3e" alt="Navify logo" class="logo">
+      <h1>Navify</h1>
+      <p class="tagline">Real-time routes for smarter commutes</p>
+    </div>
+    <nav class="nav-actions">
+      <button id="refreshBtn" class="btn accent">Refresh</button>
+      <button id="authBtn" class="btn">Login</button>
+      <button id="savedRoutesBtn" class="btn" style="display:none;">My Routes</button>
+      <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="panel map-panel slide-in">
+      <div class="map-header">
+        <h2>Live Traffic Map</h2>
+        <p class="muted">Mock map — traffic hotspots update in real time</p>
+      </div>
+      <div id="map" class="map">
+        <!-- Google Maps will be rendered here if API key is provided -->
+        <!-- Fallback: simple boxes representing areas -->
+      </div>
+      <div id="navInstructions" class="panel nav-instructions" style="margin-top:12px;">
+        <h3>Navigation</h3>
+        <div id="instructionsList" class="instructions-list muted">No active navigation</div>
+      </div>
+    </section>
+
+    <section class="panel routes-panel slide-in">
+      <h2>Route Suggestions</h2>
+      <div id="routes" class="routes-list"></div>
+      <div class="controls">
+        <div class="place-search">
+          <input id="placeSearch" placeholder="Search places (e.g. supermarket, hospital, pharmacy)" />
+          <div id="placeResults" class="place-results"></div>
+        </div>
+        <input id="origin" placeholder="From (leave empty to use your location)" />
+        <input id="dest" placeholder="To (destination required)" />
+        <select id="countrySelect" aria-label="Country filter">
+          <option value="ALL">All countries</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;margin-left:8px;color:var(--muted);font-size:13px;">
+          <input type="checkbox" id="optInLogging" />
+          <span>Log trips (opt-in)</span>
+        </label>
+        <button id="findRoutes" class="btn">Find Routes</button>
+      </div>
+    </section>
+
+    <section class="panel transit-panel slide-in">
+      <h2>Transit Next Departures</h2>
+      <div id="transit" class="transit-list"></div>
+    </section>
+
+    <section class="panel analytics-panel slide-in">
+      <h2>Your Dashboard</h2>
+      <div id="dashboardContent" class="dashboard-content">
+        <!-- Slideshow / promotional content will be injected here by client JS -->
+        <div class="note muted">This is a demo. Use the country selector to browse real places.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; Navify — Demo</p>
+  </footer>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="authModalClose">&times;</button>
+      <h2>Login / Register</h2>
+      
+      <div id="authTabs" class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      
+      <div id="loginTab" class="auth-form active">
+        <input id="loginEmail" type="email" placeholder="Email" />
+        <input id="loginPassword" type="password" placeholder="Password" />
+        <button id="loginBtn" class="btn">Login</button>
+        <div id="loginError" class="error-message" style="display:none;"></div>
+      </div>
+      
+      <div id="registerTab" class="auth-form">
+        <input id="registerName" type="text" placeholder="Name" />
+        <input id="registerEmail" type="email" placeholder="Email" />
+        <input id="registerPassword" type="password" placeholder="Password (min 6 chars)" />
+        <button id="registerBtn" class="btn">Register</button>
+        <div id="registerError" class="error-message" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Routes Modal -->
+  <div id="savedRoutesModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="savedRoutesModalClose">&times;</button>
+      <h2>My Saved Routes</h2>
+      <div id="savedRoutesList" class="saved-routes-list"></div>
+    </div>
+  </div>
+</body>
+</html>
