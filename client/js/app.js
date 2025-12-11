@@ -568,6 +568,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Socket.IO event listeners
+  if (socket) {
+    socket.on('connect', () => {
+      console.log('✅ Socket connected!');
+      setStatus('Connected', '#2ecc71');
+    });
+    socket.on('disconnect', () => {
+      console.log('❌ Socket disconnected');
+      setStatus('Disconnected', '#e74c3c');
+    });
+    socket.on('trafficUpdate', (data) => {
+      if (data && data.areas) {
+        renderAreas(data.areas);
+      }
+    });
+  }
+
+  // Initial fetch of traffic data
+  fetch(apiUrl('/api/traffic'))
+    .then(res => res.json())
+    .then(data => {
+      if (data.areas) renderAreas(data.areas);
+    })
+    .catch(err => console.error('Failed to fetch initial traffic:', err));
+
   // Populate countries selector and persist selection
   if (countrySelect) {
     loadCountries(countrySelect).then(() => {
