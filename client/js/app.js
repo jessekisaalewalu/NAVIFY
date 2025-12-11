@@ -6,188 +6,188 @@ document.documentElement.classList.add('js');
 
 // FIXED: Proper configuration for backend origin
 // Use window.__API_ORIGIN__ if set (for custom config), otherwise default to localhost:3001
-const SERVER_ORIGIN = window.__API_ORIGIN__ || 'http://localhost:3001';
+const SERVER_ORIGIN = window.__API_ORIGIN__ || 'http://localhost:3000';
 
-function apiUrl(path){ 
-  return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path; 
+function apiUrl(path) {
+  return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path;
 }
 
 // Authentication state
 let authToken = localStorage.getItem('authToken');
 let currentUser = null;
 function getAuthHeaders() {
-  return authToken ? { 
-    'Authorization': `Bearer ${authToken}`, 
-    'Content-Type': 'application/json' 
-  } : { 
-    'Content-Type': 'application/json' 
+  return authToken ? {
+    'Authorization': `Bearer ${authToken}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
   };
 }
 
 // FIXED: Socket.io will now properly connect to your backend at port 3001
 let socket = null;
-if(typeof io !== 'undefined'){
-  try{ 
+if (typeof io !== 'undefined') {
+  try {
     socket = io(SERVER_ORIGIN, {
       transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5
-    }); 
+    });
     console.log('Socket.io connecting to:', SERVER_ORIGIN);
-  } catch(e){ 
-    console.warn('socket init failed', e); 
-    socket = null; 
+  } catch (e) {
+    console.warn('socket init failed', e);
+    socket = null;
   }
 } else {
   console.warn('socket.io client not loaded; continuing without realtime');
 }
 
 // tiny debug/status UI
-function ensureStatusEl(){
+function ensureStatusEl() {
   let el = document.getElementById('backendStatus');
-  if(!el){
+  if (!el) {
     el = document.createElement('div');
     el.id = 'backendStatus';
-    el.style.fontSize='12px';
-    el.style.color='var(--muted)';
-    el.style.marginLeft='8px';
+    el.style.fontSize = '12px';
+    el.style.color = 'var(--muted)';
+    el.style.marginLeft = '8px';
     const headerBrand = document.querySelector('.brand');
-    if(headerBrand) headerBrand.appendChild(el);
+    if (headerBrand) headerBrand.appendChild(el);
   }
 
-// Create a custom dropdown UI that mirrors the native select (for consistent styling)
-function initCustomCountrySelect(selectEl){
-  if(!selectEl) return;
-  // If already initialized, skip
-  if(selectEl.dataset.customized === '1') return;
+  // Create a custom dropdown UI that mirrors the native select (for consistent styling)
+  function initCustomCountrySelect(selectEl) {
+    if (!selectEl) return;
+    // If already initialized, skip
+    if (selectEl.dataset.customized === '1') return;
 
-  // Hide native select but keep it in DOM for form compatibility
-  selectEl.style.position = 'absolute';
-  selectEl.style.left = '-9999px';
-  selectEl.tabIndex = -1;
+    // Hide native select but keep it in DOM for form compatibility
+    selectEl.style.position = 'absolute';
+    selectEl.style.left = '-9999px';
+    selectEl.tabIndex = -1;
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'custom-select';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select';
 
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'custom-select-button';
-  btn.setAttribute('aria-haspopup','listbox');
-  btn.setAttribute('aria-expanded','false');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'custom-select-button';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
 
-  const labelSpan = document.createElement('span');
-  labelSpan.className = 'custom-select-label';
-  labelSpan.textContent = selectEl.options[selectEl.selectedIndex]?.text || 'All countries';
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'custom-select-label';
+    labelSpan.textContent = selectEl.options[selectEl.selectedIndex]?.text || 'All countries';
 
-  const arrow = document.createElement('span');
-  arrow.className = 'custom-select-arrow';
-  arrow.innerHTML = '▾';
+    const arrow = document.createElement('span');
+    arrow.className = 'custom-select-arrow';
+    arrow.innerHTML = '▾';
 
-  btn.appendChild(labelSpan);
-  btn.appendChild(arrow);
-  wrapper.appendChild(btn);
+    btn.appendChild(labelSpan);
+    btn.appendChild(arrow);
+    wrapper.appendChild(btn);
 
-  const list = document.createElement('div');
-  list.className = 'custom-select-list';
-  list.setAttribute('role','listbox');
-  list.tabIndex = -1;
+    const list = document.createElement('div');
+    list.className = 'custom-select-list';
+    list.setAttribute('role', 'listbox');
+    list.tabIndex = -1;
 
-  // Build items from native select
-  if(selectEl.options.length === 0){
-    const empty = document.createElement('div'); empty.className='custom-select-empty'; empty.textContent='No countries'; list.appendChild(empty);
-  } else {
-    for(let i=0;i<selectEl.options.length;i++){
-      const opt = selectEl.options[i];
-      const item = document.createElement('div');
-      item.className = 'custom-select-item';
-      item.setAttribute('role','option');
-      item.dataset.value = opt.value;
-      item.textContent = opt.textContent;
-      if(opt.disabled) item.setAttribute('aria-disabled','true');
-      if(opt.selected) item.setAttribute('aria-selected','true');
-      list.appendChild(item);
+    // Build items from native select
+    if (selectEl.options.length === 0) {
+      const empty = document.createElement('div'); empty.className = 'custom-select-empty'; empty.textContent = 'No countries'; list.appendChild(empty);
+    } else {
+      for (let i = 0; i < selectEl.options.length; i++) {
+        const opt = selectEl.options[i];
+        const item = document.createElement('div');
+        item.className = 'custom-select-item';
+        item.setAttribute('role', 'option');
+        item.dataset.value = opt.value;
+        item.textContent = opt.textContent;
+        if (opt.disabled) item.setAttribute('aria-disabled', 'true');
+        if (opt.selected) item.setAttribute('aria-selected', 'true');
+        list.appendChild(item);
+      }
     }
-  }
 
-  wrapper.appendChild(list);
-  selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
-  selectEl.dataset.customized = '1';
+    wrapper.appendChild(list);
+    selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
+    selectEl.dataset.customized = '1';
 
-  let open = false;
-  let focusedIndex = -1;
-  const items = Array.from(list.querySelectorAll('.custom-select-item'));
+    let open = false;
+    let focusedIndex = -1;
+    const items = Array.from(list.querySelectorAll('.custom-select-item'));
 
-  function openList(){
-    list.style.display = 'block';
-    btn.setAttribute('aria-expanded','true');
-    open = true; focusedIndex = items.findIndex(it=>it.getAttribute('aria-selected')==='true');
-    highlight(focusedIndex);
-  }
-  function closeList(){
-    list.style.display = 'none';
-    btn.setAttribute('aria-expanded','false');
-    open = false; removeHighlight();
-  }
-  function highlight(idx){
-    items.forEach((it,i)=>{ it.classList.toggle('active', i===idx); });
-    if(idx>=0 && items[idx]) items[idx].scrollIntoView({block:'nearest'});
-  }
-  function removeHighlight(){ items.forEach(it=>it.classList.remove('active')); }
-
-  btn.addEventListener('click', (e)=>{
-    e.preventDefault();
-    if(open) closeList(); else openList();
-  });
-
-  // Click on item
-  list.addEventListener('click', (e)=>{
-    const it = e.target.closest('.custom-select-item');
-    if(!it) return;
-    const val = it.dataset.value;
-    selectEl.value = val;
-    // Update label
-    labelSpan.textContent = it.textContent;
-    // Mark aria-selected
-    items.forEach(i=>i.setAttribute('aria-selected','false'));
-    it.setAttribute('aria-selected','true');
-    // Persist and trigger change
-    localStorage.setItem('selectedCountry', val);
-    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-    closeList();
-  });
-
-  // Keyboard support
-  btn.addEventListener('keydown', (e)=>{
-    if(e.key === 'ArrowDown' || e.key === 'Down'){
-      e.preventDefault(); if(!open) openList(); focusedIndex = Math.min(items.length-1, Math.max(0, focusedIndex+1)); highlight(focusedIndex);
-    } else if(e.key === 'ArrowUp' || e.key === 'Up'){
-      e.preventDefault(); if(!open) openList(); focusedIndex = Math.max(0, focusedIndex-1); highlight(focusedIndex);
-    } else if(e.key === 'Enter'){
-      e.preventDefault(); if(open && focusedIndex>=0){ items[focusedIndex].click(); } else openList();
-    } else if(e.key === 'Escape'){
-      e.preventDefault(); closeList();
+    function openList() {
+      list.style.display = 'block';
+      btn.setAttribute('aria-expanded', 'true');
+      open = true; focusedIndex = items.findIndex(it => it.getAttribute('aria-selected') === 'true');
+      highlight(focusedIndex);
     }
-  });
+    function closeList() {
+      list.style.display = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+      open = false; removeHighlight();
+    }
+    function highlight(idx) {
+      items.forEach((it, i) => { it.classList.toggle('active', i === idx); });
+      if (idx >= 0 && items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+    function removeHighlight() { items.forEach(it => it.classList.remove('active')); }
 
-  // Close when clicking outside
-  document.addEventListener('click', (e)=>{ if(!wrapper.contains(e.target)) closeList(); });
-}
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (open) closeList(); else openList();
+    });
+
+    // Click on item
+    list.addEventListener('click', (e) => {
+      const it = e.target.closest('.custom-select-item');
+      if (!it) return;
+      const val = it.dataset.value;
+      selectEl.value = val;
+      // Update label
+      labelSpan.textContent = it.textContent;
+      // Mark aria-selected
+      items.forEach(i => i.setAttribute('aria-selected', 'false'));
+      it.setAttribute('aria-selected', 'true');
+      // Persist and trigger change
+      localStorage.setItem('selectedCountry', val);
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      closeList();
+    });
+
+    // Keyboard support
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Down') {
+        e.preventDefault(); if (!open) openList(); focusedIndex = Math.min(items.length - 1, Math.max(0, focusedIndex + 1)); highlight(focusedIndex);
+      } else if (e.key === 'ArrowUp' || e.key === 'Up') {
+        e.preventDefault(); if (!open) openList(); focusedIndex = Math.max(0, focusedIndex - 1); highlight(focusedIndex);
+      } else if (e.key === 'Enter') {
+        e.preventDefault(); if (open && focusedIndex >= 0) { items[focusedIndex].click(); } else openList();
+      } else if (e.key === 'Escape') {
+        e.preventDefault(); closeList();
+      }
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) closeList(); });
+  }
   return el;
 }
 const statusEl = ensureStatusEl();
-function setStatus(text, color){ if(statusEl){ statusEl.textContent = text; statusEl.style.color = color || 'var(--muted)'; }}
+function setStatus(text, color) { if (statusEl) { statusEl.textContent = text; statusEl.style.color = color || 'var(--muted)'; } }
 setStatus('connecting...');
 
-function ensureDebug(){
+function ensureDebug() {
   // Debug panel removed: return null so no bottom-right time/debug box is created.
   // Debug logging still goes to console; debug() is a no-op for DOM output.
   return null;
 }
 const debugEl = ensureDebug();
-function debug(msg){ try{ console.log('[DEBUG]', msg); debugEl.textContent = `${new Date().toLocaleTimeString()} - ${msg}\n` + debugEl.textContent.slice(0,2000); }catch(e){} }
-window.addEventListener('error', e => { debug('ERROR: '+(e.message||e)); });
-window.addEventListener('unhandledrejection', e => { debug('PromiseRejection: '+(e.reason&&e.reason.message?e.reason.message:JSON.stringify(e.reason))); });
+function debug(msg) { try { console.log('[DEBUG]', msg); debugEl.textContent = `${new Date().toLocaleTimeString()} - ${msg}\n` + debugEl.textContent.slice(0, 2000); } catch (e) { } }
+window.addEventListener('error', e => { debug('ERROR: ' + (e.message || e)); });
+window.addEventListener('unhandledrejection', e => { debug('PromiseRejection: ' + (e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason))); });
 
 // Google Maps state (populated if server provides API key)
 let googleMapsLoaded = false;
@@ -208,77 +208,77 @@ let currentRouteSteps = [];
 let currentRoutePolylinePoints = [];
 let instructionsEl = null;
 
-function loadGoogleMaps(key){
-  return new Promise((resolve,reject)=>{
-    if(window.google && window.google.maps){ googleMapsLoaded = true; return resolve(); }
+function loadGoogleMaps(key) {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.maps) { googleMapsLoaded = true; return resolve(); }
     const s = document.createElement('script');
     s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places`;
     s.defer = true; s.async = true;
-    s.onload = ()=>{ googleMapsLoaded = true; debug('Google Maps loaded'); resolve(); };
-    s.onerror = (err)=>{ debug('Google Maps load error'); reject(err); };
+    s.onload = () => { googleMapsLoaded = true; debug('Google Maps loaded'); resolve(); };
+    s.onerror = (err) => { debug('Google Maps load error'); reject(err); };
     document.head.appendChild(s);
   });
 }
 
-  // Load list of countries (uses restcountries API) and populate the country selector
-  async function loadCountries(selectEl){
-    if(!selectEl) return;
-    try{
-        // Try to load cached list first
-        const cached = localStorage.getItem('countriesList');
-        let countries = cached ? JSON.parse(cached) : null;
+// Load list of countries (uses restcountries API) and populate the country selector
+async function loadCountries(selectEl) {
+  if (!selectEl) return;
+  try {
+    // Try to load cached list first
+    const cached = localStorage.getItem('countriesList');
+    let countries = cached ? JSON.parse(cached) : null;
 
-        // If not cached, try local static file first for reliability
-        if(!countries){
-          try{
-            const localRes = await fetch('/data/countries.json');
-            if(localRes.ok){
-              const localData = await localRes.json();
-              countries = localData.map(c=>({ name: c.name, code: c.code }));
-            }
-          }catch(errLocal){
-            // ignore and try remote
-          }
+    // If not cached, try local static file first for reliability
+    if (!countries) {
+      try {
+        const localRes = await fetch('/data/countries.json');
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          countries = localData.map(c => ({ name: c.name, code: c.code }));
         }
-
-        // If still not found, fallback to remote REST Countries API
-        if(!countries){
-          const res = await fetch('https://restcountries.com/v3.1/all');
-          const data = await res.json();
-          countries = data.map(c => ({ name: c.name.common, code: c.cca2 })).filter(c=>c.code);
-        }
-
-        // Normalize and cache
-        countries = countries.map(c=>({ name: c.name, code: (c.code || '').toUpperCase() })).filter(c=>c.code);
-        countries.sort((a,b)=>a.name.localeCompare(b.name));
-        localStorage.setItem('countriesList', JSON.stringify(countries));
-
-        // Populate select
-        selectEl.innerHTML = '<option value="ALL">All countries</option>' + countries.map(c=>`<option value="${c.code}">${c.name}</option>`).join('');
-
-        // Restore previously selected country
-        const sel = localStorage.getItem('selectedCountry');
-        if(sel){ selectEl.value = sel; }
-      }catch(e){
-        console.warn('Could not load countries list, leaving selector with default', e);
-        // Ensure at least the default option exists
-        selectEl.innerHTML = '<option value="ALL">All countries</option>';
+      } catch (errLocal) {
+        // ignore and try remote
       }
-  }
+    }
 
-function initMap(mapEl){
-  if(!googleMapsLoaded) return;
+    // If still not found, fallback to remote REST Countries API
+    if (!countries) {
+      const res = await fetch('https://restcountries.com/v3.1/all');
+      const data = await res.json();
+      countries = data.map(c => ({ name: c.name.common, code: c.cca2 })).filter(c => c.code);
+    }
+
+    // Normalize and cache
+    countries = countries.map(c => ({ name: c.name, code: (c.code || '').toUpperCase() })).filter(c => c.code);
+    countries.sort((a, b) => a.name.localeCompare(b.name));
+    localStorage.setItem('countriesList', JSON.stringify(countries));
+
+    // Populate select
+    selectEl.innerHTML = '<option value="ALL">All countries</option>' + countries.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
+
+    // Restore previously selected country
+    const sel = localStorage.getItem('selectedCountry');
+    if (sel) { selectEl.value = sel; }
+  } catch (e) {
+    console.warn('Could not load countries list, leaving selector with default', e);
+    // Ensure at least the default option exists
+    selectEl.innerHTML = '<option value="ALL">All countries</option>';
+  }
+}
+
+function initMap(mapEl) {
+  if (!googleMapsLoaded) return;
   mapEl.classList.add('has-google-maps');
   const defaultPos = { lat: 37.7749, lng: -122.4194 };
-  map = new google.maps.Map(mapEl, { 
-    center: defaultPos, 
+  map = new google.maps.Map(mapEl, {
+    center: defaultPos,
     zoom: 12,
     mapTypeControl: true,
     streetViewControl: true,
     fullscreenControl: true
   });
   directionsService = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({ 
+  directionsRenderer = new google.maps.DirectionsRenderer({
     map,
     suppressMarkers: false,
     polylineOptions: {
@@ -288,15 +288,15 @@ function initMap(mapEl){
   });
 
   // Get user location
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
       const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       userLocation = p;
       map.setCenter(p);
       map.setZoom(15);
-      userMarker = new google.maps.Marker({ 
-        position: p, 
-        map, 
+      userMarker = new google.maps.Marker({
+        position: p,
+        map,
         title: 'Your Location',
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
@@ -308,11 +308,11 @@ function initMap(mapEl){
         }
       });
       debug('User location: ' + p.lat + ', ' + p.lng);
-      
+
       // Update Leaflet map if it exists
-      if(leafletMap){
+      if (leafletMap) {
         leafletMap.setView([p.lat, p.lng], 14);
-        if(!userMarker || !userMarker._leaflet_id){
+        if (!userMarker || !userMarker._leaflet_id) {
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
               className: 'custom-marker user-marker',
@@ -323,55 +323,55 @@ function initMap(mapEl){
           }).addTo(leafletMap).bindPopup('Your Location');
         }
       }
-      
+
       // Update transit with location
       fetchTransit();
-    }, err => { 
+    }, err => {
       debug('geolocation denied or failed: ' + err.message);
       setStatus('Location access denied', '#ff9f43');
     });
 
-    try{
-      watchId = navigator.geolocation.watchPosition(p=>{
+    try {
+      watchId = navigator.geolocation.watchPosition(p => {
         const loc = { lat: p.coords.latitude, lng: p.coords.longitude };
         userLocation = loc;
-        if(!userMarker){ 
-          userMarker = new google.maps.Marker({ position: loc, map, title:'You' }); 
-        } else { 
-          userMarker.setPosition(loc); 
+        if (!userMarker) {
+          userMarker = new google.maps.Marker({ position: loc, map, title: 'You' });
+        } else {
+          userMarker.setPosition(loc);
         }
         // Update navigation progress if navigating
-        try{ updateNavigationProgress(); }catch(e){ debug('updateNavigationProgress error: '+e.message); }
-      }, e=>{ debug('watchPosition failed'); }, { enableHighAccuracy:true, maximumAge:2000 });
-    }catch(e){ debug('watchPosition unsupported'); }
+        try { updateNavigationProgress(); } catch (e) { debug('updateNavigationProgress error: ' + e.message); }
+      }, e => { debug('watchPosition failed'); }, { enableHighAccuracy: true, maximumAge: 2000 });
+    } catch (e) { debug('watchPosition unsupported'); }
   }
 
   // Initialize autocomplete for address inputs
-  if(google.maps.places){
+  if (google.maps.places) {
     const originInput = document.getElementById('origin');
     const destInput = document.getElementById('dest');
-    
-    if(originInput){
+
+    if (originInput) {
       originAutocomplete = new google.maps.places.Autocomplete(originInput, {
         types: ['geocode'],
         fields: ['formatted_address', 'geometry']
       });
       originAutocomplete.addListener('place_changed', () => {
         const place = originAutocomplete.getPlace();
-        if(place.geometry){
+        if (place.geometry) {
           debug('Origin selected: ' + place.formatted_address);
         }
       });
     }
-    
-    if(destInput){
+
+    if (destInput) {
       destAutocomplete = new google.maps.places.Autocomplete(destInput, {
         types: ['geocode'],
         fields: ['formatted_address', 'geometry']
       });
       destAutocomplete.addListener('place_changed', () => {
         const place = destAutocomplete.getPlace();
-        if(place.geometry){
+        if (place.geometry) {
           debug('Destination selected: ' + place.formatted_address);
         }
       });
@@ -388,11 +388,11 @@ async function loginUser(email, password) {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    
+
     if (!res.ok) {
       throw new Error(data.error || 'Login failed');
     }
-    
+
     authToken = data.token;
     currentUser = data.user;
     localStorage.setItem('authToken', authToken);
@@ -413,11 +413,11 @@ async function registerUser(email, password, name) {
       body: JSON.stringify({ email, password, name })
     });
     const data = await res.json();
-    
+
     if (!res.ok) {
       throw new Error(data.error || 'Registration failed');
     }
-    
+
     authToken = data.token;
     currentUser = data.user;
     localStorage.setItem('authToken', authToken);
@@ -444,7 +444,7 @@ async function saveRoute(route) {
     showAuthModal();
     return;
   }
-  
+
   try {
     const res = await fetch(apiUrl('/api/routes'), {
       method: 'POST',
@@ -462,11 +462,11 @@ async function saveRoute(route) {
       })
     });
     const data = await res.json();
-    
+
     if (!res.ok) {
       throw new Error(data.error || 'Failed to save route');
     }
-    
+
     debug('Route saved: ' + data.id);
     alert('Route saved successfully!');
     return data;
@@ -478,7 +478,7 @@ async function saveRoute(route) {
 
 async function getSavedRoutes() {
   if (!authToken) return [];
-  
+
   try {
     const res = await fetch(apiUrl('/api/routes/saved'), {
       headers: getAuthHeaders()
@@ -493,17 +493,17 @@ async function getSavedRoutes() {
 
 async function deleteSavedRoute(routeId) {
   if (!authToken) return;
-  
+
   try {
     const res = await fetch(apiUrl(`/api/routes/saved/${routeId}`), {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    
+
     if (!res.ok) {
       throw new Error('Failed to delete route');
     }
-    
+
     debug('Route deleted: ' + routeId);
     return true;
   } catch (error) {
@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const optInLoggingEl = document.getElementById('optInLogging');
   const placeSearchIn = document.getElementById('placeSearch');
   const placeResultsEl = document.getElementById('placeResults');
-  
+
   // Restore user session
   if (localStorage.getItem('currentUser')) {
     currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -540,17 +540,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // helper to render the traffic areas (fallback when no Google Maps)
-  function renderAreas(areas){
+  function renderAreas(areas) {
     // Only render areas if NO map is loaded (not Google Maps, not Leaflet)
-    if(googleMapsLoaded && map){
+    if (googleMapsLoaded && map) {
       mapEl.classList.add('has-google-maps');
       return; // Don't render boxes when we have Google Maps
     }
-    if(leafletMap){
+    if (leafletMap) {
       mapEl.classList.add('has-map');
       return; // Don't render boxes when we have Leaflet map
     }
-    
+
     // Only render traffic area boxes if no map exists
     mapEl.classList.remove('has-google-maps');
     mapEl.classList.remove('has-map');
@@ -558,10 +558,10 @@ document.addEventListener('DOMContentLoaded', () => {
     areas.forEach(a => {
       const div = document.createElement('div');
       div.className = 'area';
-      const name = document.createElement('div'); name.className='name'; name.textContent = a.name;
-      const cong = document.createElement('div'); cong.className='cong'; cong.textContent = `Congestion: ${a.congestion}%`;
-      const bar = document.createElement('div'); bar.className='bar';
-      const fill = document.createElement('div'); fill.className='fill'; fill.style.width = `${a.congestion}%`;
+      const name = document.createElement('div'); name.className = 'name'; name.textContent = a.name;
+      const cong = document.createElement('div'); cong.className = 'cong'; cong.textContent = `Congestion: ${a.congestion}%`;
+      const bar = document.createElement('div'); bar.className = 'bar';
+      const fill = document.createElement('div'); fill.className = 'fill'; fill.style.width = `${a.congestion}%`;
       bar.appendChild(fill);
       div.appendChild(name); div.appendChild(cong); div.appendChild(bar);
       mapEl.appendChild(div);
@@ -569,38 +569,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Populate countries selector and persist selection
-  if(countrySelect){
-    loadCountries(countrySelect).then(()=>{
+  if (countrySelect) {
+    loadCountries(countrySelect).then(() => {
       // Initialize a custom-styled dropdown and keep native select in sync
-      try{ initCustomCountrySelect(countrySelect); }catch(e){ console.warn('custom country select init failed', e); }
-      countrySelect.addEventListener('change', ()=>{
+      try { initCustomCountrySelect(countrySelect); } catch (e) { console.warn('custom country select init failed', e); }
+      countrySelect.addEventListener('change', () => {
         localStorage.setItem('selectedCountry', countrySelect.value);
         // Update dashboard content based on new country selection
-        try{ updateDashboardForCountry(countrySelect.value); }catch(e){ debug('updateDashboardForCountry error: '+e.message); }
+        try { updateDashboardForCountry(countrySelect.value); } catch (e) { debug('updateDashboardForCountry error: ' + e.message); }
       });
     });
   }
 
   // Place search input: debounce and show results
-  if(placeSearchIn && placeResultsEl){
+  if (placeSearchIn && placeResultsEl) {
     let searchTimer = null;
-    placeSearchIn.addEventListener('input', (e)=>{
+    placeSearchIn.addEventListener('input', (e) => {
       clearTimeout(searchTimer);
       const q = e.target.value;
-      if(!q || q.trim().length < 2){ placeResultsEl.innerHTML = ''; return; }
-      searchTimer = setTimeout(async ()=>{
+      if (!q || q.trim().length < 2) { placeResultsEl.innerHTML = ''; return; }
+      searchTimer = setTimeout(async () => {
         const results = await searchPlaces(q.trim());
         renderPlaceResults(results, placeResultsEl);
       }, 450);
     });
-    placeSearchIn.addEventListener('keypress', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); placeSearchIn.dispatchEvent(new Event('input')); } });
+    placeSearchIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); placeSearchIn.dispatchEvent(new Event('input')); } });
   }
 
   // Trip logging: persist opt-in preference
-  if(optInLoggingEl){
+  if (optInLoggingEl) {
     // restore previous choice
     const saved = localStorage.getItem('navify_opt_in_logging');
-    if(saved === '1') optInLoggingEl.checked = true;
+    if (saved === '1') optInLoggingEl.checked = true;
     optInLoggingEl.addEventListener('change', () => {
       localStorage.setItem('navify_opt_in_logging', optInLoggingEl.checked ? '1' : '0');
     });
@@ -610,31 +610,31 @@ document.addEventListener('DOMContentLoaded', () => {
   let _tripStart = null; // { originLat, originLng, ts }
 
   // Initialize fallback map using Leaflet (OpenStreetMap)
-  function initLeafletMap(mapEl){
-    if(leafletMap) return; // Already initialized
-    
+  function initLeafletMap(mapEl) {
+    if (leafletMap) return; // Already initialized
+
     try {
       // Default center (will be updated with user location or route)
       const defaultCenter = [37.7749, -122.4194];
-      
+
       leafletMap = L.map(mapEl).setView(defaultCenter, 13);
-      
+
       // Add OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(leafletMap);
-      
+
       mapEl.classList.add('has-map');
       debug('Leaflet map initialized');
-      
+
       // Try to get user location for Leaflet map
-      if(navigator.geolocation){
+      if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
           const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           userLocation = p;
           leafletMap.setView([p.lat, p.lng], 14);
-          
+
           L.marker([p.lat, p.lng], {
             icon: L.divIcon({
               className: 'custom-marker user-marker',
@@ -645,51 +645,51 @@ document.addEventListener('DOMContentLoaded', () => {
           }).addTo(leafletMap).bindPopup('Your Location');
         }, err => { debug('Leaflet geolocation failed: ' + err.message); });
 
-        try{
+        try {
           watchId = navigator.geolocation.watchPosition(p => {
             const loc = { lat: p.coords.latitude, lng: p.coords.longitude };
             userLocation = loc;
             // update or create user marker
-            if(!userMarker || !userMarker._leaflet_id){
+            if (!userMarker || !userMarker._leaflet_id) {
               userMarker = L.marker([loc.lat, loc.lng], {
                 icon: L.divIcon({ className: 'custom-marker user-marker', html: '<div style="background:#00d4ff; width:16px; height:16px; border-radius:50%; border:3px solid white;"></div>' })
               }).addTo(leafletMap);
             } else {
               userMarker.setLatLng([loc.lat, loc.lng]);
             }
-            try{ updateNavigationProgress(); }catch(e){ debug('updateNavigationProgress error: '+e.message); }
-          }, e => { debug('watchPosition failed'); }, { enableHighAccuracy:true, maximumAge:2000 });
-        }catch(e){ debug('watchPosition unsupported for Leaflet'); }
+            try { updateNavigationProgress(); } catch (e) { debug('updateNavigationProgress error: ' + e.message); }
+          }, e => { debug('watchPosition failed'); }, { enableHighAccuracy: true, maximumAge: 2000 });
+        } catch (e) { debug('watchPosition unsupported for Leaflet'); }
       }
-    } catch(e) {
+    } catch (e) {
       debug('Failed to initialize Leaflet map: ' + e.message);
     }
   }
 
   // Display route on Leaflet map
-  function displayRouteOnLeaflet(origin, destination, routeGeometry){
-    if(!leafletMap) {
+  function displayRouteOnLeaflet(origin, destination, routeGeometry) {
+    if (!leafletMap) {
       debug('Leaflet map not initialized');
       return;
     }
-    
+
     try {
       debug('Displaying route on Leaflet. Origin: ' + JSON.stringify(origin) + ', Dest: ' + JSON.stringify(destination));
       debug('Route geometry type: ' + (routeGeometry ? routeGeometry.type : 'null'));
-      
+
       // Validate coordinates - if missing, provide fallback
-      if((!origin || !origin.lat || !origin.lng) && (!destination || !destination.lat || !destination.lng)){
+      if ((!origin || !origin.lat || !origin.lng) && (!destination || !destination.lat || !destination.lng)) {
         debug('Missing both origin and destination coordinates, centering on San Francisco');
         leafletMap.setView([37.7749, -122.4194], 12);
       }
-      
+
       // Clear previous markers and route
-      if(originMarker && originMarker.remove) originMarker.remove();
-      if(destMarker && destMarker.remove) destMarker.remove();
-      if(routePolyline && routePolyline.remove) routePolyline.remove();
-      
+      if (originMarker && originMarker.remove) originMarker.remove();
+      if (destMarker && destMarker.remove) destMarker.remove();
+      if (routePolyline && routePolyline.remove) routePolyline.remove();
+
       // Add origin marker
-      if(origin && origin.lat && origin.lng){
+      if (origin && origin.lat && origin.lng) {
         originMarker = L.marker([origin.lat, origin.lng], {
           icon: L.divIcon({
             className: 'custom-marker origin-marker',
@@ -700,9 +700,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }).addTo(leafletMap).bindPopup('Origin');
         debug('Origin marker added at ' + origin.lat + ', ' + origin.lng);
       }
-      
+
       // Add destination marker
-      if(destination && destination.lat && destination.lng){
+      if (destination && destination.lat && destination.lng) {
         destMarker = L.marker([destination.lat, destination.lng], {
           icon: L.divIcon({
             className: 'custom-marker dest-marker',
@@ -713,54 +713,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }).addTo(leafletMap).bindPopup('Destination');
         debug('Destination marker added at ' + destination.lat + ', ' + destination.lng);
       }
-      
+
       // Add route line
       currentRoutePolylinePoints = [];
       currentRouteSteps = [];
-      if(routeGeometry){
+      if (routeGeometry) {
         debug('Route geometry found. Type: ' + routeGeometry.type + ', Coordinates length: ' + (routeGeometry.coordinates ? routeGeometry.coordinates.length : 0));
-        
-        if(routeGeometry.coordinates && routeGeometry.coordinates.length > 0){
+
+        if (routeGeometry.coordinates && routeGeometry.coordinates.length > 0) {
           // Handle different geometry types
           let latlngs = [];
-          
-          if(routeGeometry.type === 'LineString'){
+
+          if (routeGeometry.type === 'LineString') {
             // Simple line string: coordinates are [lng, lat] pairs
             latlngs = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]);
-          } else if(routeGeometry.type === 'MultiLineString'){
+          } else if (routeGeometry.type === 'MultiLineString') {
             // Multi-line string: array of line strings
             latlngs = routeGeometry.coordinates.flat().map(coord => [coord[1], coord[0]]);
           } else {
             debug('Unknown geometry type: ' + routeGeometry.type);
             // Try to extract coordinates anyway
             latlngs = routeGeometry.coordinates.map(coord => {
-              if(Array.isArray(coord) && coord.length >= 2){
+              if (Array.isArray(coord) && coord.length >= 2) {
                 return [coord[1], coord[0]]; // Assume [lng, lat]
               }
               return null;
             }).filter(c => c !== null);
           }
-          
-          if(latlngs.length > 0){
+
+          if (latlngs.length > 0) {
             routePolyline = L.polyline(latlngs, {
               color: '#00d4ff',
               weight: 5,
               opacity: 0.9
             }).addTo(leafletMap);
-            currentRoutePolylinePoints = latlngs.map(p=>({lat:p[0],lng:p[1]}));
-            
+            currentRoutePolylinePoints = latlngs.map(p => ({ lat: p[0], lng: p[1] }));
+
             debug('Route polyline added with ' + latlngs.length + ' points');
-            
+
             // Fit map to show entire route
             const bounds = routePolyline.getBounds();
-            if(origin && origin.lat) bounds.extend([origin.lat, origin.lng]);
-            if(destination && destination.lat) bounds.extend([destination.lat, destination.lng]);
+            if (origin && origin.lat) bounds.extend([origin.lat, origin.lng]);
+            if (destination && destination.lat) bounds.extend([destination.lat, destination.lng]);
             leafletMap.fitBounds(bounds, { padding: [30, 30] });
             debug('Map fitted to route bounds');
           } else {
             debug('Could not extract valid coordinates from geometry');
             // Fallback: create straight line
-            if(origin && origin.lat && destination && destination.lat){
+            if (origin && origin.lat && destination && destination.lat) {
               routePolyline = L.polyline([[origin.lat, origin.lng], [destination.lat, destination.lng]], {
                 color: '#00d4ff',
                 weight: 5,
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           debug('Route geometry has no coordinates');
           // Still fit to markers if we have them
-          if(origin && origin.lat && destination && destination.lat){
+          if (origin && origin.lat && destination && destination.lat) {
             // Create a simple straight line
             routePolyline = L.polyline([[origin.lat, origin.lng], [destination.lat, destination.lng]], {
               color: '#00d4ff',
@@ -787,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         debug('Route geometry is null or undefined');
         // Still fit to markers if we have them
-        if(origin && origin.lat && destination && destination.lat){
+        if (origin && origin.lat && destination && destination.lat) {
           // Create a simple straight line as fallback
           routePolyline = L.polyline([[origin.lat, origin.lng], [destination.lat, destination.lng]], {
             color: '#00d4ff',
@@ -795,37 +795,37 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 0.9,
             dashArray: '10, 10'
           }).addTo(leafletMap);
-            leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [30, 30] });
+          leafletMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [30, 30] });
           debug('Fallback straight line route displayed');
         } else {
           debug('No valid coordinates available to display route. Showing default map view.');
           leafletMap.setView([37.7749, -122.4194], 12);
         }
       }
-    } catch(e) {
+    } catch (e) {
       debug('Error displaying route on Leaflet: ' + e.message + '\n' + e.stack);
       console.error('Leaflet display error:', e);
     }
   }
 
   // Display route on Google Maps
-  function displayRouteOnGoogleMap(origin, destination, routeData){
-    if(!map || !window.google) {
+  function displayRouteOnGoogleMap(origin, destination, routeData) {
+    if (!map || !window.google) {
       debug('Google Maps not available');
       return;
     }
-    
+
     try {
       debug('Displaying route on Google Maps. Origin: ' + JSON.stringify(origin) + ', Dest: ' + JSON.stringify(destination));
       debug('Route data: ' + (routeData ? 'present' : 'missing'));
-      
+
       // Clear previous markers
-      if(originMarker) originMarker.setMap(null);
-      if(destMarker) destMarker.setMap(null);
-      if(routePolyline) routePolyline.setMap(null);
-      
+      if (originMarker) originMarker.setMap(null);
+      if (destMarker) destMarker.setMap(null);
+      if (routePolyline) routePolyline.setMap(null);
+
       // Add origin marker
-      if(origin && origin.lat && origin.lng){
+      if (origin && origin.lat && origin.lng) {
         originMarker = new google.maps.Marker({
           position: { lat: origin.lat, lng: origin.lng },
           map: map,
@@ -846,9 +846,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
-      
+
       // Add destination marker
-      if(destination && destination.lat && destination.lng){
+      if (destination && destination.lat && destination.lng) {
         destMarker = new google.maps.Marker({
           position: { lat: destination.lat, lng: destination.lng },
           map: map,
@@ -869,16 +869,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
-      
+
       // Display route
-      if(routeData){
-        if(routeData.geometry && routeData.geometry.coordinates){
+      if (routeData) {
+        if (routeData.geometry && routeData.geometry.coordinates) {
           // Geoapify route
           const path = routeData.geometry.coordinates.map(coord => ({
             lat: coord[1],
             lng: coord[0]
           }));
-          
+
           routePolyline = new google.maps.Polyline({
             path: path,
             geodesic: true,
@@ -887,15 +887,15 @@ document.addEventListener('DOMContentLoaded', () => {
             strokeWeight: 5
           });
           routePolyline.setMap(map);
-          currentRoutePolylinePoints = path.map(p=>({ lat: p.lat, lng: p.lng }));
-          
+          currentRoutePolylinePoints = path.map(p => ({ lat: p.lat, lng: p.lng }));
+
           // Fit bounds
           const bounds = new google.maps.LatLngBounds();
           path.forEach(point => bounds.extend(point));
-          if(origin && origin.lat) bounds.extend({ lat: origin.lat, lng: origin.lng });
-          if(destination && destination.lat) bounds.extend({ lat: destination.lat, lng: destination.lng });
+          if (origin && origin.lat) bounds.extend({ lat: origin.lat, lng: origin.lng });
+          if (destination && destination.lat) bounds.extend({ lat: destination.lat, lng: destination.lng });
           map.fitBounds(bounds, 40);
-        } else if(routeData.polyline){
+        } else if (routeData.polyline) {
           // Google Maps polyline
           function decodePolyline(encoded) {
             const poly = [];
@@ -922,7 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return poly;
           }
-          
+
           const decodedPath = decodePolyline(routeData.polyline);
           routePolyline = new google.maps.Polyline({
             path: decodedPath,
@@ -932,31 +932,31 @@ document.addEventListener('DOMContentLoaded', () => {
             strokeWeight: 5
           });
           routePolyline.setMap(map);
-          currentRoutePolylinePoints = decodedPath.map(p=>({ lat: p.lat, lng: p.lng }));
-          
+          currentRoutePolylinePoints = decodedPath.map(p => ({ lat: p.lat, lng: p.lng }));
+
           const bounds = new google.maps.LatLngBounds();
           decodedPath.forEach(point => bounds.extend(point));
           map.fitBounds(bounds, 40);
         }
       }
-    } catch(e) {
+    } catch (e) {
       debug('Error displaying route on Google Maps: ' + e.message);
     }
   }
 
   // load server config (maps API key) and initialize map if present
-  async function loadConfig(){
-    try{
+  async function loadConfig() {
+    try {
       const res = await fetch(apiUrl('/api/config'));
       const cfg = await res.json();
       debug('loadConfig response: ' + JSON.stringify(cfg));
-      if(cfg && cfg.mapsApiKey){
+      if (cfg && cfg.mapsApiKey) {
         debug('Google Maps API key found, loading Google Maps...');
         try {
           await loadGoogleMaps(cfg.mapsApiKey);
           initMap(mapEl);
           debug('Google Maps loaded and initialized');
-        } catch(mapsError) {
+        } catch (mapsError) {
           debug('Google Maps failed to load: ' + mapsError.message + ', falling back to Leaflet');
           initLeafletMap(mapEl);
         }
@@ -964,32 +964,32 @@ document.addEventListener('DOMContentLoaded', () => {
         debug('No Google Maps key provided; using Leaflet fallback');
         initLeafletMap(mapEl);
       }
-    }catch(e){ 
-      debug('loadConfig failed: '+(e && e.message));
+    } catch (e) {
+      debug('loadConfig failed: ' + (e && e.message));
       // Initialize fallback map anyway
       initLeafletMap(mapEl);
     }
   }
 
   // fetch data functions
-  async function fetchTraffic(){
+  async function fetchTraffic() {
     debug('fetchTraffic start');
     let data;
-    try{
+    try {
       const res = await fetch(apiUrl('/api/traffic'));
       data = await res.json();
       setStatus('connected', 'var(--accent-2)');
       debug('fetchTraffic: got ' + (data.areas && data.areas.length));
-    }catch(e){
+    } catch (e) {
       console.warn('fetchTraffic failed, using fallback', e);
       setStatus('using fallback', '#ff9f43');
-      data = { areas: [ {id:'A1',name:'Main Ave - East',congestion:30}, {id:'A2',name:'Central Blvd',congestion:45}, {id:'A3',name:'Market St',congestion:70}, {id:'A4',name:'University Road',congestion:20} ] };
+      data = { areas: [{ id: 'A1', name: 'Main Ave - East', congestion: 30 }, { id: 'A2', name: 'Central Blvd', congestion: 45 }, { id: 'A3', name: 'Market St', congestion: 70 }, { id: 'A4', name: 'University Road', congestion: 20 }] };
     }
     renderAreas(data.areas);
     updateAnalytics(data.areas);
   }
 
-  function updateAnalytics(areas){
+  function updateAnalytics(areas) {
     // Dashboard analytics removed: keep this function as a noop so older calls don't break.
     return;
   }
@@ -998,7 +998,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dashboardEl = document.getElementById('dashboardContent');
   let slideshowState = { slides: [], idx: 0, timer: null };
 
-  function createPromoSlides(){
+  function createPromoSlides() {
     return [
       { img: 'https://source.unsplash.com/800x450/?map,city', title: 'Smart routing', text: 'Find the best routes with live traffic and turn-by-turn guidance.' },
       { img: 'https://source.unsplash.com/800x450/?commute,traffic', title: 'Real-time traffic', text: 'GPS-powered congestion insights help you avoid delays.' },
@@ -1007,16 +1007,16 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
   }
 
-  function buildSlidesHtml(slides){
+  function buildSlidesHtml(slides) {
     const wrap = document.createElement('div'); wrap.className = 'slideshow';
-    slides.forEach((s, i)=>{
-      const slide = document.createElement('div'); slide.className = 'slide' + (i===0 ? ' active' : '');
+    slides.forEach((s, i) => {
+      const slide = document.createElement('div'); slide.className = 'slide' + (i === 0 ? ' active' : '');
       // Add a subtle background to the slide as a fallback while image loads
       slide.style.background = 'linear-gradient(180deg, rgba(7,16,33,0.6), rgba(5,32,51,0.6))';
       const img = document.createElement('img'); img.alt = s.title || 'Slide';
 
       // Preload the image and set src only if it loads; otherwise use placeholder
-      try{
+      try {
         const preload = new Image();
         preload.crossOrigin = 'anonymous';
         // Cache buster to help with fresh fetches during development
@@ -1025,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preload.onload = () => { img.src = src; };
         preload.onerror = () => { img.src = generatePlaceholderDataUrl(s.title || '', s.text || ''); };
         preload.src = src;
-      }catch(e){ img.src = generatePlaceholderDataUrl(s.title || '', s.text || ''); }
+      } catch (e) { img.src = generatePlaceholderDataUrl(s.title || '', s.text || ''); }
 
       const cap = document.createElement('div'); cap.className = 'slide-caption';
       cap.innerHTML = `<h4>${s.title || ''}</h4><p>${s.text || ''}</p>`;
@@ -1036,15 +1036,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const controls = document.createElement('div'); controls.className = 'slide-controls';
     const prev = document.createElement('button'); prev.textContent = '◀';
     const next = document.createElement('button'); next.textContent = '▶';
-    prev.addEventListener('click', ()=>{ showSlide(slideshowState.idx - 1); });
-    next.addEventListener('click', ()=>{ showSlide(slideshowState.idx + 1); });
+    prev.addEventListener('click', () => { showSlide(slideshowState.idx - 1); });
+    next.addEventListener('click', () => { showSlide(slideshowState.idx + 1); });
     controls.appendChild(prev); controls.appendChild(next);
     const container = document.createElement('div'); container.appendChild(wrap); container.appendChild(controls);
     return { container, wrap };
   }
 
   // Generate a simple SVG placeholder encoded as a data URL
-  function generatePlaceholderDataUrl(title, subtitle){
+  function generatePlaceholderDataUrl(title, subtitle) {
     const w = 1200, h = 675;
     const bg = '#0b1320';
     const accent = '#00d4ff';
@@ -1057,65 +1057,65 @@ document.addEventListener('DOMContentLoaded', () => {
           </linearGradient>
         </defs>
         <rect width='100%' height='100%' fill='url(#g)' />
-        <rect x='40' y='${h-220}' width='${w-80}' height='160' rx='12' fill='rgba(0,0,0,0.32)' />
-        <text x='80' y='${h-140}' font-family='Arial, Helvetica, sans-serif' font-size='36' fill='${accent}'>${escapeXml(title)}</text>
-        <text x='80' y='${h-100}' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='rgba(255,255,255,0.9)'>${escapeXml(subtitle)}</text>
+        <rect x='40' y='${h - 220}' width='${w - 80}' height='160' rx='12' fill='rgba(0,0,0,0.32)' />
+        <text x='80' y='${h - 140}' font-family='Arial, Helvetica, sans-serif' font-size='36' fill='${accent}'>${escapeXml(title)}</text>
+        <text x='80' y='${h - 100}' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='rgba(255,255,255,0.9)'>${escapeXml(subtitle)}</text>
       </svg>`;
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  function escapeXml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function escapeXml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
-  function showSlide(i){
-    if(!slideshowState.slides || slideshowState.slides.length===0) return;
+  function showSlide(i) {
+    if (!slideshowState.slides || slideshowState.slides.length === 0) return;
     const len = slideshowState.slides.length;
     let idx = ((i % len) + len) % len;
     slideshowState.idx = idx;
     const nodes = slideshowState.wrap.querySelectorAll('.slide');
-    nodes.forEach((n, k)=> n.classList.toggle('active', k===idx));
+    nodes.forEach((n, k) => n.classList.toggle('active', k === idx));
   }
 
-  function startSlideshow(slides, interval = 4000){
+  function startSlideshow(slides, interval = 4000) {
     stopSlideshow();
     slideshowState.slides = slides;
     const html = buildSlidesHtml(slides);
     // clear dashboard and place slideshow
-    if(!dashboardEl) return;
+    if (!dashboardEl) return;
     dashboardEl.innerHTML = '';
     dashboardEl.appendChild(html.container);
     slideshowState.wrap = html.wrap;
     showSlide(0);
-    slideshowState.timer = setInterval(()=> showSlide(slideshowState.idx + 1), interval);
+    slideshowState.timer = setInterval(() => showSlide(slideshowState.idx + 1), interval);
   }
 
-  function stopSlideshow(){
-    if(slideshowState.timer){ clearInterval(slideshowState.timer); slideshowState.timer = null; }
+  function stopSlideshow() {
+    if (slideshowState.timer) { clearInterval(slideshowState.timer); slideshowState.timer = null; }
   }
 
-  async function updateDashboardForCountry(code){
+  async function updateDashboardForCountry(code) {
     // If no country or ALL, show promo content
-    if(!code || code === 'ALL'){
+    if (!code || code === 'ALL') {
       const slides = createPromoSlides();
       startSlideshow(slides, 4500);
       return;
     }
 
     // For a selected country, fetch some sample places for common categories
-    const types = ['supermarket','hospital','pharmacy','university','police station'];
+    const types = ['supermarket', 'hospital', 'pharmacy', 'university', 'police station'];
     const slides = [];
-    for(const t of types){
-      try{
+    for (const t of types) {
+      try {
         // First try Google Places if server supports it
         let used = false;
-        try{
+        try {
           const gRes = await fetch(apiUrl(`/api/google/places?query=${encodeURIComponent(t + ' in ' + code)}&country=${encodeURIComponent(code)}`));
-          if(gRes.ok){
+          if (gRes.ok) {
             const gData = await gRes.json();
-            const gp = (gData.results && gData.results.length>0) ? gData.results[0] : null;
-            if(gp){
+            const gp = (gData.results && gData.results.length > 0) ? gData.results[0] : null;
+            if (gp) {
               const title = gp.name || t;
               const text = gp.formatted_address || t;
-              if(gp.photos && gp.photos.length>0 && gp.photos[0].photo_reference){
+              if (gp.photos && gp.photos.length > 0 && gp.photos[0].photo_reference) {
                 const ref = gp.photos[0].photo_reference;
                 const img = apiUrl(`/api/google/photo?ref=${encodeURIComponent(ref)}&maxwidth=900`);
                 slides.push({ img, title, text });
@@ -1129,21 +1129,21 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
           }
-        }catch(ge){ debug('google places fetch failed: '+ge.message); }
+        } catch (ge) { debug('google places fetch failed: ' + ge.message); }
 
-        if(!used){
+        if (!used) {
           // Fallback to existing searchPlaces (Geoapify/Nominatim) and Unsplash
           const results = await searchPlaces(t);
-          const p = (results && results.length>0) ? results[0] : null;
+          const p = (results && results.length > 0) ? results[0] : null;
           const title = p ? (p.name || t) : t;
           const q = encodeURIComponent(p ? (p.name || t) : `${t} ${code}`);
           const img = `https://source.unsplash.com/800x450/?${q}`;
           const text = p ? (p.address || p.label || (p.category || t)) : `Explore ${t} in ${code}`;
           slides.push({ img, title, text });
         }
-      }catch(e){ debug('updateDashboardForCountry error: '+e.message); }
+      } catch (e) { debug('updateDashboardForCountry error: ' + e.message); }
     }
-    if(slides.length === 0){ startSlideshow(createPromoSlides()); } else { startSlideshow(slides); }
+    if (slides.length === 0) { startSlideshow(createPromoSlides()); } else { startSlideshow(slides); }
   }
 
   // --- Places search and basic navigation helpers ---
@@ -1152,41 +1152,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let navPingIntervalId = null;
   let navControlEl = null;
 
-  async function searchPlaces(query){
-    if(!query || query.trim().length === 0) return [];
+  async function searchPlaces(query) {
+    if (!query || query.trim().length === 0) return [];
     const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
     const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
-    try{
+    try {
       const res = await fetch(apiUrl(`/api/places?q=${encodeURIComponent(query)}${countryQuery}&limit=10`));
       const data = await res.json();
-      if(data && data.places){
-        data.places.forEach(p => { if(p && p.id) _placesCache[p.id] = p; });
+      if (data && data.places) {
+        data.places.forEach(p => { if (p && p.id) _placesCache[p.id] = p; });
         return data.places;
       }
       return [];
-    }catch(e){ debug('searchPlaces failed: ' + e.message); return []; }
+    } catch (e) { debug('searchPlaces failed: ' + e.message); return []; }
   }
 
-  function renderPlaceResults(results, resultsEl){
+  function renderPlaceResults(results, resultsEl) {
     resultsEl.innerHTML = '';
-    if(!results || results.length === 0){ resultsEl.innerHTML = '<div class="muted">No places found</div>'; return; }
+    if (!results || results.length === 0) { resultsEl.innerHTML = '<div class="muted">No places found</div>'; return; }
     results.forEach(p => {
       const div = document.createElement('div'); div.className = 'place-result';
       div.innerHTML = `<div class="place-name">${p.name}</div><div class="muted place-type">${p.category || ''}</div>`;
       const actions = document.createElement('div'); actions.className = 'place-actions';
       const navBtn = document.createElement('button'); navBtn.className = 'btn small'; navBtn.textContent = 'Navigate';
-      navBtn.addEventListener('click', ()=>{
+      navBtn.addEventListener('click', () => {
         // fill destination and start search+navigation
-        if(p.address) destIn.value = p.address;
+        if (p.address) destIn.value = p.address;
         // Kick off route search using coordinates if available
-        if(p.lat && p.lng){
+        if (p.lat && p.lng) {
           // set dest to coordinates to avoid ambiguous geocoding
           const coordStr = `${p.lat},${p.lng}`;
           destIn.value = p.name || p.address || coordStr;
           findRoutes('', coordStr);
           // Start navigation once route is computed (currentRoute will be set by findRoutes)
-          setTimeout(()=>{
-            try{ startNavigation(currentRoute, userLocation || null, { lat: p.lat, lng: p.lng }); }catch(e){ debug('startNavigation error: '+e.message); }
+          setTimeout(() => {
+            try { startNavigation(currentRoute, userLocation || null, { lat: p.lat, lng: p.lng }); } catch (e) { debug('startNavigation error: ' + e.message); }
           }, 800);
         } else {
           // fallback: search routes by address text
@@ -1199,9 +1199,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function startNavigation(route, originCoords, destCoords){
-    if(!route){ alert('No route loaded to navigate'); return; }
-    if(navActive) stopNavigation();
+  function startNavigation(route, originCoords, destCoords) {
+    if (!route) { alert('No route loaded to navigate'); return; }
+    if (navActive) stopNavigation();
     navActive = true;
 
     // Create small floating control to stop navigation
@@ -1214,18 +1214,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(navControlEl);
 
     // Start pinging server every 8 seconds with current location
-    async function sendPing(lat, lng, speed){
-      try{
+    async function sendPing(lat, lng, speed) {
+      try {
         await fetch(apiUrl('/api/traffic/ping'), {
-          method:'POST', headers: { 'Content-Type':'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lat, lng, speed: speed || 0, ts: Date.now() })
         });
-      }catch(e){ debug('ping failed: ' + e.message); }
+      } catch (e) { debug('ping failed: ' + e.message); }
     }
 
     // Record trip start if logging is enabled
     const shouldLog = optInLoggingEl && optInLoggingEl.checked;
-    if(shouldLog){
+    if (shouldLog) {
       _tripStart = {
         originLat: originCoords && originCoords.lat ? originCoords.lat : (userLocation && userLocation.lat ? userLocation.lat : null),
         originLng: originCoords && originCoords.lng ? originCoords.lng : (userLocation && userLocation.lng ? userLocation.lng : null),
@@ -1234,22 +1234,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Immediate ping and set interval
-    if(userLocation && userLocation.lat){ sendPing(userLocation.lat, userLocation.lng, 0); }
-    navPingIntervalId = setInterval(()=>{
+    if (userLocation && userLocation.lat) { sendPing(userLocation.lat, userLocation.lng, 0); }
+    navPingIntervalId = setInterval(() => {
       const loc = userLocation;
-      if(loc && loc.lat){ sendPing(loc.lat, loc.lng, 0); }
+      if (loc && loc.lat) { sendPing(loc.lat, loc.lng, 0); }
     }, 8000);
 
     setStatus('Navigation active', '#4ecdc4');
     // Center map to user location and route
-    if(leafletMap && route && route.geometry){ displayRouteOnLeaflet(originCoords, destCoords, route.geometry); }
-    if(map && googleMapsLoaded && route){ displayRouteOnGoogleMap(originCoords, destCoords, route); }
+    if (leafletMap && route && route.geometry) { displayRouteOnLeaflet(originCoords, destCoords, route.geometry); }
+    if (map && googleMapsLoaded && route) { displayRouteOnGoogleMap(originCoords, destCoords, route); }
 
     // Build steps list for turn-by-turn (try multiple formats)
-    try{
+    try {
       currentRouteSteps = [];
       // Google route: route has 'legs' with steps
-      if(route && route.legs && route.legs.length > 0){
+      if (route && route.legs && route.legs.length > 0) {
         route.legs.forEach(leg => {
           (leg.steps || []).forEach(s => {
             currentRouteSteps.push({
@@ -1262,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
       // Server route: steps may be in route.steps with instruction and lat/lng in geometry
-      else if(route && route.steps && route.steps.length > 0){
+      else if (route && route.steps && route.steps.length > 0) {
         route.steps.forEach(s => {
           currentRouteSteps.push({
             instruction: s.instruction || s.name || '',
@@ -1274,93 +1274,93 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // Render instructions panel
       renderInstructions();
-    }catch(e){ debug('build steps error: '+e.message); }
+    } catch (e) { debug('build steps error: ' + e.message); }
   }
 
-  function renderInstructions(){
-    if(!instructionsEl) instructionsEl = document.getElementById('instructionsList');
-    if(!instructionsEl) return;
-    if(!currentRouteSteps || currentRouteSteps.length === 0){ instructionsEl.innerHTML = '<div class="muted">No turn-by-turn steps available</div>'; return; }
+  function renderInstructions() {
+    if (!instructionsEl) instructionsEl = document.getElementById('instructionsList');
+    if (!instructionsEl) return;
+    if (!currentRouteSteps || currentRouteSteps.length === 0) { instructionsEl.innerHTML = '<div class="muted">No turn-by-turn steps available</div>'; return; }
     instructionsEl.innerHTML = '';
     currentRouteSteps.forEach((s, idx) => {
       const div = document.createElement('div'); div.className = 'instruction-item';
       div.dataset.idx = idx;
-      div.innerHTML = `<div><strong>${idx+1}.</strong> <span class="instr-text">${s.instruction || 'Proceed'}</span></div><div class="muted">${s.distance ? s.distance + 'm' : ''}</div>`;
+      div.innerHTML = `<div><strong>${idx + 1}.</strong> <span class="instr-text">${s.instruction || 'Proceed'}</span></div><div class="muted">${s.distance ? s.distance + 'm' : ''}</div>`;
       instructionsEl.appendChild(div);
     });
   }
 
-  function haversine(a,b){
-    if(!a || !b) return Infinity;
-    const toRad = x => x * Math.PI/180;
+  function haversine(a, b) {
+    if (!a || !b) return Infinity;
+    const toRad = x => x * Math.PI / 180;
     const R = 6371000;
     const dLat = toRad(b.lat - a.lat); const dLon = toRad(b.lng - a.lng);
     const lat1 = toRad(a.lat); const lat2 = toRad(b.lat);
-    const A = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.sin(dLon/2)*Math.sin(dLon/2)*Math.cos(lat1)*Math.cos(lat2);
-    const C = 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1-A));
+    const A = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const C = 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1 - A));
     return R * C;
   }
 
   // Find nearest instruction step and highlight upcoming maneuvers; snap user marker to route polyline
-  function updateNavigationProgress(){
-    if(!navActive) return;
-    if(!userLocation) return;
+  function updateNavigationProgress() {
+    if (!navActive) return;
+    if (!userLocation) return;
     // Snap user to nearest point on polyline (approx nearest vertex)
-    if(currentRoutePolylinePoints && currentRoutePolylinePoints.length > 0){
+    if (currentRoutePolylinePoints && currentRoutePolylinePoints.length > 0) {
       let minD = Infinity; let minIdx = -1;
-      currentRoutePolylinePoints.forEach((pt, i)=>{ const d = haversine(userLocation, pt); if(d < minD){ minD = d; minIdx = i; } });
-      if(minIdx >= 0){
+      currentRoutePolylinePoints.forEach((pt, i) => { const d = haversine(userLocation, pt); if (d < minD) { minD = d; minIdx = i; } });
+      if (minIdx >= 0) {
         // Move user marker to snapped point for visual guidance
         const snap = currentRoutePolylinePoints[minIdx];
-        if(leafletMap && userMarker && userMarker.setLatLng){ userMarker.setLatLng([snap.lat, snap.lng]); }
-        if(map && googleMapsLoaded && userMarker && userMarker.setPosition){ userMarker.setPosition({ lat: snap.lat, lng: snap.lng }); }
+        if (leafletMap && userMarker && userMarker.setLatLng) { userMarker.setLatLng([snap.lat, snap.lng]); }
+        if (map && googleMapsLoaded && userMarker && userMarker.setPosition) { userMarker.setPosition({ lat: snap.lat, lng: snap.lng }); }
       }
     }
 
     // Highlight upcoming instruction step
-    if(currentRouteSteps && currentRouteSteps.length > 0){
+    if (currentRouteSteps && currentRouteSteps.length > 0) {
       let nearestIdx = -1; let nearestD = Infinity;
-      currentRouteSteps.forEach((s, idx)=>{ if(s.lat && s.lng){ const d = haversine(userLocation, {lat:s.lat,lng:s.lng}); if(d < nearestD){ nearestD = d; nearestIdx = idx; } } });
+      currentRouteSteps.forEach((s, idx) => { if (s.lat && s.lng) { const d = haversine(userLocation, { lat: s.lat, lng: s.lng }); if (d < nearestD) { nearestD = d; nearestIdx = idx; } } });
       // If within 200m pick that as upcoming, else find next step ahead
       const upcoming = nearestIdx >= 0 && nearestD < 200 ? nearestIdx : Math.max(0, nearestIdx);
       // update DOM
       const items = instructionsEl ? Array.from(instructionsEl.querySelectorAll('.instruction-item')) : [];
-      items.forEach(it=> it.classList.remove('upcoming'));
-      if(items[upcoming]) items[upcoming].classList.add('upcoming');
+      items.forEach(it => it.classList.remove('upcoming'));
+      if (items[upcoming]) items[upcoming].classList.add('upcoming');
       // Optionally, scroll into view
-      if(items[upcoming]) items[upcoming].scrollIntoView({ block:'nearest', behavior:'smooth' });
+      if (items[upcoming]) items[upcoming].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }
 
-  function stopNavigation(){
+  function stopNavigation() {
     navActive = false;
-    if(navPingIntervalId){ clearInterval(navPingIntervalId); navPingIntervalId = null; }
-    if(navControlEl && navControlEl.remove) navControlEl.remove(); navControlEl = null;
+    if (navPingIntervalId) { clearInterval(navPingIntervalId); navPingIntervalId = null; }
+    if (navControlEl && navControlEl.remove) navControlEl.remove(); navControlEl = null;
     setStatus('Navigation stopped', 'var(--muted)');
     // If opt-in logging was enabled, create a trip log
-    try{
+    try {
       const shouldLog = optInLoggingEl && optInLoggingEl.checked;
-      if(shouldLog && _tripStart){
+      if (shouldLog && _tripStart) {
         const endTs = Date.now();
-        const durationSec = Math.round((endTs - _tripStart.ts)/1000);
+        const durationSec = Math.round((endTs - _tripStart.ts) / 1000);
         // Distance: try to use route distance if available
         let distanceKm = null;
-        if(currentRoute && (currentRoute.distance_km || currentRoute.distance_km === 0)) distanceKm = currentRoute.distance_km;
-        else if(currentRoute && currentRoute.geometry && currentRoute.geometry.coordinates){
+        if (currentRoute && (currentRoute.distance_km || currentRoute.distance_km === 0)) distanceKm = currentRoute.distance_km;
+        else if (currentRoute && currentRoute.geometry && currentRoute.geometry.coordinates) {
           // approximate length by summing haversine segments
           const coords = currentRoute.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
           let meters = 0;
-          for(let i=1;i<coords.length;i++){
-            const a = coords[i-1]; const b = coords[i];
+          for (let i = 1; i < coords.length; i++) {
+            const a = coords[i - 1]; const b = coords[i];
             const R = 6371000; // m
-            const toRad = x => x * Math.PI/180;
+            const toRad = x => x * Math.PI / 180;
             const dLat = toRad(b.lat - a.lat); const dLon = toRad(b.lng - a.lng);
             const lat1 = toRad(a.lat); const lat2 = toRad(b.lat);
-            const A = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.sin(dLon/2)*Math.sin(dLon/2)*Math.cos(lat1)*Math.cos(lat2);
-            const C = 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1-A));
+            const A = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+            const C = 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1 - A));
             meters += R * C;
           }
-          distanceKm = +(meters/1000).toFixed(2);
+          distanceKm = +(meters / 1000).toFixed(2);
         }
 
         const tripPayload = {
@@ -1377,37 +1377,37 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // Send trip to server (use auth when available)
-        (async ()=>{
-          try{
-            const headers = authToken ? { 'Content-Type':'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type':'application/json' };
-            await fetch(apiUrl('/api/trips'), { method:'POST', headers, body: JSON.stringify(tripPayload) });
+        (async () => {
+          try {
+            const headers = authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' };
+            await fetch(apiUrl('/api/trips'), { method: 'POST', headers, body: JSON.stringify(tripPayload) });
             debug('Trip logged');
-          }catch(e){ debug('Trip log failed: ' + e.message); }
+          } catch (e) { debug('Trip log failed: ' + e.message); }
         })();
       }
-    }catch(e){ debug('stopNavigation logging error: '+e.message); }
+    } catch (e) { debug('stopNavigation logging error: ' + e.message); }
     _tripStart = null;
   }
 
 
-  async function fetchTransit(){
+  async function fetchTransit() {
     debug('fetchTransit start');
     let data;
-    try{
+    try {
       let url = apiUrl('/api/transit');
-      if(userLocation){
+      if (userLocation) {
         url += `?lat=${userLocation.lat}&lng=${userLocation.lng}`;
       }
       const res = await fetch(url);
       data = await res.json();
       debug('fetchTransit: got ' + (data.next && data.next.length));
-    }catch(e){
+    } catch (e) {
       console.warn('fetchTransit failed, using fallback', e);
-      data = { next: [ { line: 'Bus 12', in_min: 5, status: 'On time' }, { line: 'Bus 3', in_min: 12, status: 'Delayed 4m' } ] };
+      data = { next: [{ line: 'Bus 12', in_min: 5, status: 'On time' }, { line: 'Bus 3', in_min: 12, status: 'Delayed 4m' }] };
     }
     transitEl.innerHTML = '';
-    if(data.next && data.next.length > 0){
-      data.next.forEach(n=>{
+    if (data.next && data.next.length > 0) {
+      data.next.forEach(n => {
         const item = document.createElement('div');
         item.className = 'transit-item';
         item.innerHTML = `<div>${n.line} <span class='muted'>in ${n.in_min}m</span></div><div>${n.status}</div>`;
@@ -1419,14 +1419,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Show loading state
-  function showLoading(element, message = 'Searching routes...'){
+  function showLoading(element, message = 'Searching routes...') {
     element.innerHTML = `<div class="loading-state"><div class="spinner"></div><div class="muted">${message}</div></div>`;
   }
 
   // find routes: use Google Directions if available, otherwise fall back to server API
-  async function findRoutes(origin='', dest=''){
+  async function findRoutes(origin = '', dest = '') {
     debug('findRoutes start');
-    
+
     // Show loading state
     showLoading(routesEl, 'Finding best routes...');
     findRoutesBtn.disabled = true;
@@ -1434,14 +1434,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get origin - prefer user location if available
     let originVal = origin || originIn.value || '';
-    if(!originVal && userLocation){
+    if (!originVal && userLocation) {
       originVal = `${userLocation.lat},${userLocation.lng}`;
       originIn.placeholder = 'Using your location';
     }
-    
+
     const destVal = dest || destIn.value || '';
-    
-    if(!destVal){
+
+    if (!destVal) {
       routesEl.innerHTML = '<div class="error-state muted">Please enter a destination</div>';
       findRoutesBtn.disabled = false;
       findRoutesBtn.textContent = 'Find Routes';
@@ -1449,23 +1449,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // If Google Maps Directions is available, use it
-    if(directionsService && map && googleMapsLoaded){
-      const request = { 
-        origin: originVal, 
-        destination: destVal, 
-        travelMode: google.maps.TravelMode.DRIVING, 
-        provideRouteAlternatives: true 
+    if (directionsService && map && googleMapsLoaded) {
+      const request = {
+        origin: originVal,
+        destination: destVal,
+        travelMode: google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: true
       };
-      
+
       directionsService.route(request, (result, status) => {
         findRoutesBtn.disabled = false;
         findRoutesBtn.textContent = 'Find Routes';
-        
-        if(status === 'OK'){
+
+        if (status === 'OK') {
           directionsRenderer.setDirections(result);
           routesEl.innerHTML = '';
           let totalEta = 0;
-          
+
           // Extract origin and destination from first route
           const firstRoute = result.routes[0];
           const firstLeg = firstRoute.legs[0];
@@ -1477,11 +1477,11 @@ document.addEventListener('DOMContentLoaded', () => {
             lat: firstLeg.end_location.lat(),
             lng: firstLeg.end_location.lng()
           };
-          
+
           // Display markers
-          if(originMarker) originMarker.setMap(null);
-          if(destMarker) destMarker.setMap(null);
-          
+          if (originMarker) originMarker.setMap(null);
+          if (destMarker) destMarker.setMap(null);
+
           originMarker = new google.maps.Marker({
             position: originCoords,
             map: map,
@@ -1501,7 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
               fontWeight: 'bold'
             }
           });
-          
+
           destMarker = new google.maps.Marker({
             position: destCoords,
             map: map,
@@ -1521,13 +1521,13 @@ document.addEventListener('DOMContentLoaded', () => {
               fontWeight: 'bold'
             }
           });
-          
+
           result.routes.forEach((r, idx) => {
             const legs = r.legs || [];
-            const eta = legs.reduce((s,l)=>s + (l.duration? l.duration.value/60:0),0);
-            const distance = legs.reduce((s,l)=>s + (l.distance? l.distance.value/1000:0),0);
+            const eta = legs.reduce((s, l) => s + (l.duration ? l.duration.value / 60 : 0), 0);
+            const distance = legs.reduce((s, l) => s + (l.distance ? l.distance.value / 1000 : 0), 0);
             totalEta += eta;
-            
+
             const div = document.createElement('div');
             div.className = 'route-item';
             div.innerHTML = `
@@ -1540,30 +1540,30 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             `;
             routesEl.appendChild(div);
-            
+
             const btn = div.querySelector('.show-map');
-            btn.addEventListener('click', ()=>{
+            btn.addEventListener('click', () => {
               directionsRenderer.setDirections({ routes: [r] });
-              try{ map.fitBounds(r.bounds, 40); }catch(e){ map.fitBounds(r.bounds); }
+              try { map.fitBounds(r.bounds, 40); } catch (e) { map.fitBounds(r.bounds); }
               // Highlight selected route
               document.querySelectorAll('.route-item').forEach(item => item.classList.remove('selected'));
               div.classList.add('selected');
             });
-            
+
             // Add start navigation button
             const startBtn = document.createElement('button');
             startBtn.className = 'btn small';
             startBtn.style.cssText = 'margin-top:6px; display:block; width:100%; background:#2ecc71;';
             startBtn.textContent = 'Start';
-            startBtn.addEventListener('click', ()=>{
+            startBtn.addEventListener('click', () => {
               // Use first leg locations as origin/dest
-              try{
+              try {
                 startNavigation(r, originCoords, destCoords);
-              }catch(e){ debug('start navigation error: '+e.message); }
+              } catch (e) { debug('start navigation error: ' + e.message); }
             });
             div.querySelector('div:last-child').appendChild(startBtn);
           });
-          
+
           avgEtaEl.textContent = Math.round(totalEta / Math.max(1, result.routes.length));
           debug('Found ' + result.routes.length + ' routes');
         } else {
@@ -1576,114 +1576,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fallback to server API
     debug('findRoutes using server API');
-    try{
+    try {
       // include optional country filter when provided
       const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
       const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
       const res = await fetch(apiUrl(`/api/routes?origin=${encodeURIComponent(originVal)}&dest=${encodeURIComponent(destVal)}${countryQuery}`));
       const data = await res.json();
       debug('findRoutes: got ' + (data.routes && data.routes.length));
-      
+
       findRoutesBtn.disabled = false;
       findRoutesBtn.textContent = 'Find Routes';
-      
-      if(data.error){
+
+      if (data.error) {
         routesEl.innerHTML = `<div class="error-state muted">${data.error}</div>`;
         return;
       }
-      
+
       routesEl.innerHTML = '';
       let sumEta = 0;
-      
+
       // Get origin and destination coordinates for map display
       let originCoords = null;
       let destCoords = null;
-      
+
       // Try to geocode if we have addresses
-      if(originVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(originVal)){
+      if (originVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(originVal)) {
         try {
           const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
           const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
           const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(originVal)}${countryQuery}`));
           const geoData = await geoRes.json();
-          if(geoData.location) originCoords = geoData.location;
-        } catch(e) {
+          if (geoData.location) originCoords = geoData.location;
+        } catch (e) {
           debug('Could not geocode origin: ' + e.message);
         }
-      } else if(originVal && /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(originVal)){
+      } else if (originVal && /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(originVal)) {
         const parts = originVal.split(',');
         originCoords = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
-      } else if(userLocation){
+      } else if (userLocation) {
         originCoords = userLocation;
       }
-      
-      if(destVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(destVal)){
+
+      if (destVal && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(destVal)) {
         try {
           const selectedCountry = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
           const countryQuery = (selectedCountry && selectedCountry !== 'ALL') ? `&country=${encodeURIComponent(selectedCountry)}` : '';
           const geoRes = await fetch(apiUrl(`/api/geocode?address=${encodeURIComponent(destVal)}${countryQuery}`));
           const geoData = await geoRes.json();
-          if(geoData.location) destCoords = geoData.location;
-        } catch(e) {
+          if (geoData.location) destCoords = geoData.location;
+        } catch (e) {
           debug('Could not geocode destination: ' + e.message);
         }
-      } else if(destVal && /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(destVal)){
+      } else if (destVal && /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(destVal)) {
         const parts = destVal.split(',');
         destCoords = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
       }
-      
-      if(data.routes && data.routes.length > 0){
+
+      if (data.routes && data.routes.length > 0) {
         // Use origin/dest from API response if available, otherwise use geocoded values
         const finalOriginCoords = data.origin_location || originCoords;
         const finalDestCoords = data.dest_location || destCoords;
-        
+
         // Display first route on map immediately
         const firstRoute = data.routes[0];
         currentRoute = firstRoute;
-        
+
         debug('Displaying route on map. Origin: ' + JSON.stringify(finalOriginCoords) + ', Dest: ' + JSON.stringify(finalDestCoords));
         debug('Route geometry: ' + (firstRoute.geometry ? 'present' : 'missing'));
-        
+
         // Ensure map is initialized
-        if(!map && !leafletMap){
+        if (!map && !leafletMap) {
           debug('Map not initialized, initializing Leaflet...');
           initLeafletMap(mapEl);
         }
-        
+
         // Wait a bit for map to initialize, then display route
         setTimeout(() => {
-          if(map && googleMapsLoaded){
+          if (map && googleMapsLoaded) {
             debug('Displaying on Google Maps');
             displayRouteOnGoogleMap(finalOriginCoords, finalDestCoords, firstRoute);
-          } else if(leafletMap){
+          } else if (leafletMap) {
             debug('Displaying on Leaflet map');
             displayRouteOnLeaflet(finalOriginCoords, finalDestCoords, firstRoute.geometry);
           } else {
             debug('No map available to display route');
           }
-          
+
           // Scroll to map to show the route
           const mapPanel = document.querySelector('.map-panel');
-          if(mapPanel){
+          if (mapPanel) {
             mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         }, 300);
-        
+
         data.routes.forEach((r, idx) => {
           const div = document.createElement('div');
           div.className = 'route-item';
-          
+
           // Build route details
           let details = `${r.distance_text || r.distance_km + ' km'} • ${r.duration_text || r.eta_min + ' min'}`;
-          if(r.summary) details = r.summary + ' • ' + details;
-          
+          if (r.summary) details = r.summary + ' • ' + details;
+
           const stepsHtml = r.steps && r.steps.length > 0 ? `
             <div class="route-steps" style="display:none; margin-top:8px; font-size:12px;">
               ${r.steps.slice(0, 3).map(s => `<div class="muted">→ ${s.instruction}</div>`).join('')}
               ${r.steps.length > 3 ? `<div class="muted">... and ${r.steps.length - 3} more steps</div>` : ''}
             </div>
           ` : '';
-          
+
           div.innerHTML = `
             <div>
               <strong>${r.name || `Route ${idx + 1}`}</strong>
@@ -1696,12 +1696,12 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class='btn small save-route-btn' style="display:block; width:100%; background:#4ecdc4;">Save</button>
             </div>
           `;
-          
+
           // Add event listener for details button
-          if(r.steps){
+          if (r.steps) {
             const detailsBtn = div.querySelector('.details-btn');
             const stepsEl = div.querySelector('.route-steps');
-            if(detailsBtn && stepsEl){
+            if (detailsBtn && stepsEl) {
               detailsBtn.addEventListener('click', () => {
                 const isHidden = stepsEl.style.display === 'none' || !stepsEl.style.display;
                 stepsEl.style.display = isHidden ? 'block' : 'none';
@@ -1709,14 +1709,14 @@ document.addEventListener('DOMContentLoaded', () => {
               });
             }
           }
-          
+
           // Add save route button listener
           const saveBtn = div.querySelector('.save-route-btn');
-          if(saveBtn){
+          if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
               saveBtn.disabled = true;
               saveBtn.textContent = 'Saving...';
-              
+
               const routeToSave = {
                 origin: originVal,
                 dest: destVal,
@@ -1727,13 +1727,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 geometry: r.geometry,
                 ...r
               };
-              
+
               await saveRoute(routeToSave);
               saveBtn.disabled = false;
               saveBtn.textContent = 'Save';
             });
           }
-          
+
           // Add "Show on Map" button for all routes
           const showBtn = document.createElement('button');
           showBtn.className = 'btn small';
@@ -1741,29 +1741,29 @@ document.addEventListener('DOMContentLoaded', () => {
           showBtn.textContent = 'Show on Map';
           showBtn.addEventListener('click', () => {
             currentRoute = r;
-            
+
             // Use origin/dest from API response if available
             const finalOriginCoords = data.origin_location || originCoords;
             const finalDestCoords = data.dest_location || destCoords;
-            
+
             debug('Show on Map clicked. Route geometry: ' + (r.geometry ? 'present' : 'missing'));
             debug('Origin coords: ' + JSON.stringify(finalOriginCoords) + ', Dest coords: ' + JSON.stringify(finalDestCoords));
-            
+
             // Ensure map is initialized before attempting to display
-            if(!map && !leafletMap){
+            if (!map && !leafletMap) {
               debug('Map not initialized, initializing Leaflet...');
               initLeafletMap(mapEl);
             }
-            
+
             // Small delay to ensure map is ready after initialization
             setTimeout(() => {
               // Display on Google Maps
-              if(map && googleMapsLoaded){
+              if (map && googleMapsLoaded) {
                 debug('Showing route on Google Maps');
                 displayRouteOnGoogleMap(finalOriginCoords, finalDestCoords, r);
-              } 
+              }
               // Display on Leaflet
-              else if(leafletMap){
+              else if (leafletMap) {
                 debug('Showing route on Leaflet');
                 // Always try to display, even if geometry is missing (will use fallback)
                 displayRouteOnLeaflet(finalOriginCoords, finalDestCoords, r.geometry);
@@ -1772,13 +1772,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Map is not available. Please refresh the page.');
               }
             }, 100);
-            
+
             // Scroll to map
             const mapPanel = document.querySelector('.map-panel');
-            if(mapPanel){
+            if (mapPanel) {
               mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            
+
             // Highlight selected route
             document.querySelectorAll('.route-item').forEach(item => item.classList.remove('selected'));
             div.classList.add('selected');
@@ -1793,19 +1793,19 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRoute = r;
             const finalOriginCoords = data.origin_location || originCoords;
             const finalDestCoords = data.dest_location || destCoords;
-            try{ startNavigation(r, finalOriginCoords, finalDestCoords); }catch(e){ debug('startNavigation error: '+e.message); }
+            try { startNavigation(r, finalOriginCoords, finalDestCoords); } catch (e) { debug('startNavigation error: ' + e.message); }
           });
           div.querySelector('div:last-child').appendChild(startBtn);
-          
+
           routesEl.appendChild(div);
           sumEta += r.eta_min;
         });
-        
+
         avgEtaEl.textContent = Math.round(sumEta / data.routes.length);
       } else {
         routesEl.innerHTML = '<div class="error-state muted">No routes found</div>';
       }
-    }catch(e){
+    } catch (e) {
       console.error('findRoutes failed', e);
       findRoutesBtn.disabled = false;
       findRoutesBtn.textContent = 'Find Routes';
@@ -1814,48 +1814,48 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // socket updates
-  if(socket){
+  if (socket) {
     socket.on('traffic_update', payload => {
       debug('socket traffic_update: count=' + (payload.areas && payload.areas.length));
       renderAreas(payload.areas);
       updateAnalytics(payload.areas);
-      document.querySelectorAll('.area').forEach(el=> {
-        try{ el.animate([{transform:'scale(1)'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:600, easing:'ease-out'}); }catch(e){}
+      document.querySelectorAll('.area').forEach(el => {
+        try { el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.02)' }, { transform: 'scale(1)' }], { duration: 600, easing: 'ease-out' }); } catch (e) { }
       });
     });
 
-    socket.on('connect', ()=> setStatus('connected', 'var(--accent-2)'));
-    socket.on('connect_error', ()=> setStatus('no backend', '#ff6b6b'));
-    socket.on('disconnect', ()=> setStatus('disconnected', '#ff9f43'));
+    socket.on('connect', () => setStatus('connected', 'var(--accent-2)'));
+    socket.on('connect_error', () => setStatus('no backend', '#ff6b6b'));
+    socket.on('disconnect', () => setStatus('disconnected', '#ff9f43'));
   } else {
     debug('no socket: realtime disabled');
   }
 
   // observe the main container to detect accidental clears
-  try{
+  try {
     const main = document.querySelector('main');
-    if(main){
-      const mo = new MutationObserver(muts=>{ debug('main children: ' + main.querySelectorAll('*').length); });
-      mo.observe(main, { childList:true, subtree:true });
+    if (main) {
+      const mo = new MutationObserver(muts => { debug('main children: ' + main.querySelectorAll('*').length); });
+      mo.observe(main, { childList: true, subtree: true });
     }
-  }catch(e){/* ignore */}
+  } catch (e) {/* ignore */ }
 
   // UI events
-  refreshBtn.addEventListener('click', ()=> {
-    if(socket && socket.connected){ socket.emit('request_update'); }
+  refreshBtn.addEventListener('click', () => {
+    if (socket && socket.connected) { socket.emit('request_update'); }
     fetchTraffic();
     fetchTransit();
   });
-  findRoutesBtn.addEventListener('click', ()=> {
+  findRoutesBtn.addEventListener('click', () => {
     findRoutes();
   });
-  
+
   // Allow Enter key to trigger route search
   originIn.addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') findRoutes();
+    if (e.key === 'Enter') findRoutes();
   });
   destIn.addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') findRoutes();
+    if (e.key === 'Enter') findRoutes();
   });
 
   // Auth UI setup
@@ -1864,7 +1864,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
   const authModal = document.getElementById('authModal');
   const savedRoutesModal = document.getElementById('savedRoutesModal');
-  
+
   function updateAuthUI() {
     if (currentUser) {
       authBtn.style.display = 'none';
@@ -1876,21 +1876,21 @@ document.addEventListener('DOMContentLoaded', () => {
       logoutBtn.style.display = 'none';
     }
   }
-  
+
   authBtn.addEventListener('click', showAuthModal);
   logoutBtn.addEventListener('click', () => {
     logoutUser();
     updateAuthUI();
   });
-  
+
   document.getElementById('authModalClose').addEventListener('click', () => {
     authModal.style.display = 'none';
   });
-  
+
   document.getElementById('savedRoutesModalClose').addEventListener('click', () => {
     savedRoutesModal.style.display = 'none';
   });
-  
+
   // Auth tab switching
   document.querySelectorAll('.auth-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -1901,19 +1901,19 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById(formId).classList.add('active');
     });
   });
-  
+
   // Login functionality
   document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('loginError');
-    
+
     if (!email || !password) {
       errorEl.textContent = 'Please fill in all fields';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     try {
       await loginUser(email, password);
       authModal.style.display = 'none';
@@ -1926,26 +1926,26 @@ document.addEventListener('DOMContentLoaded', () => {
       errorEl.style.display = 'block';
     }
   });
-  
+
   // Register functionality
   document.getElementById('registerBtn').addEventListener('click', async () => {
     const name = document.getElementById('registerName').value;
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
     const errorEl = document.getElementById('registerError');
-    
+
     if (!name || !email || !password) {
       errorEl.textContent = 'Please fill in all fields';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     if (password.length < 6) {
       errorEl.textContent = 'Password must be at least 6 characters';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     try {
       await registerUser(email, password, name);
       authModal.style.display = 'none';
@@ -1959,12 +1959,12 @@ document.addEventListener('DOMContentLoaded', () => {
       errorEl.style.display = 'block';
     }
   });
-  
+
   // Saved routes functionality
   savedRoutesBtn.addEventListener('click', async () => {
     const savedRoutes = await getSavedRoutes();
     const savedRoutesList = document.getElementById('savedRoutesList');
-    
+
     if (savedRoutes.length === 0) {
       savedRoutesList.innerHTML = '<div class="muted">No saved routes yet</div>';
     } else {
@@ -1982,27 +1982,27 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn small delete-route-btn" style="background:#ff6b6b;">Delete</button>
           </div>
         `;
-        
+
         const viewBtn = div.querySelector('.view-route-btn');
         const deleteBtn = div.querySelector('.delete-route-btn');
-        
+
         viewBtn.addEventListener('click', () => {
           // Display route on map
           const routeData = route.route_data ? (typeof route.route_data === 'string' ? JSON.parse(route.route_data) : route.route_data) : route;
           const originCoords = { lat: route.origin_lat, lng: route.origin_lng };
           const destCoords = { lat: route.dest_lat, lng: route.dest_lng };
-          
+
           if (map && googleMapsLoaded) {
             displayRouteOnGoogleMap(originCoords, destCoords, routeData);
           } else if (leafletMap) {
             displayRouteOnLeaflet(originCoords, destCoords, routeData.geometry);
           }
-          
+
           savedRoutesModal.style.display = 'none';
           const mapPanel = document.querySelector('.map-panel');
           if (mapPanel) mapPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
-        
+
         deleteBtn.addEventListener('click', async () => {
           if (confirm('Delete this route?')) {
             await deleteSavedRoute(route.id);
@@ -2012,14 +2012,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         });
-        
+
         savedRoutesList.appendChild(div);
       });
     }
-    
+
     savedRoutesModal.style.display = 'flex';
   });
-  
+
   updateAuthUI();
 
   // Admin summary removed per user request.
@@ -2029,29 +2029,29 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchTraffic();
   fetchTransit();
   // initialize dashboard slideshow based on current selection
-  setTimeout(()=>{
+  setTimeout(() => {
     const sel = (countrySelect && countrySelect.value) || localStorage.getItem('selectedCountry') || 'ALL';
-    try{ updateDashboardForCountry(sel); }catch(e){ debug('initial dashboard update error: '+e.message); }
+    try { updateDashboardForCountry(sel); } catch (e) { debug('initial dashboard update error: ' + e.message); }
   }, 600);
-  
+
   // Initialize fallback map immediately if Google Maps won't load
   // Check if Google Maps was requested but failed
   setTimeout(() => {
-    if(!map && !leafletMap){
+    if (!map && !leafletMap) {
       debug('Map not initialized by loadConfig (likely no Google Maps API key), initializing Leaflet fallback');
       initLeafletMap(mapEl);
-    } else if(map){
+    } else if (map) {
       debug('Google Maps initialized');
-    } else if(leafletMap){
+    } else if (leafletMap) {
       debug('Leaflet map initialized');
     }
   }, 2000);
 
   // slide-in reveal
   const observers = document.querySelectorAll('.slide-in');
-  const ioObserver = new IntersectionObserver(entries=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); ioObserver.unobserve(e.target); } });
-  }, {threshold:0.15});
-  observers.forEach(o=>ioObserver.observe(o));
+  const ioObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ioObserver.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  observers.forEach(o => ioObserver.observe(o));
 
 });
