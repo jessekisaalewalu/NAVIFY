@@ -5,8 +5,13 @@
 document.documentElement.classList.add('js');
 
 // FIXED: Proper configuration for backend origin
-// Use window.__API_ORIGIN__ if set (for custom config), otherwise default to localhost:3001
-const SERVER_ORIGIN = window.__API_ORIGIN__ || 'http://localhost:3000';
+// Use window.__API_ORIGIN__ if set (for custom config)
+// OR use VITE_BACKEND_URL from meta env
+// OR auto-detect if on same domain
+// OTHERWISE default to localhost:3000
+const SERVER_ORIGIN = window.__API_ORIGIN__
+  || (import.meta.env && import.meta.env.VITE_BACKEND_URL)
+  || (window.location.hostname !== 'localhost' ? 'https://navify-backend.onrender.com' : 'http://localhost:3000');
 
 function apiUrl(path) {
   return SERVER_ORIGIN ? `${SERVER_ORIGIN}${path}` : path;
