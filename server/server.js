@@ -25,8 +25,13 @@ app.use(express.json());
 const db = require('./config/database');
 
 // Routes
+// Routes
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
+
+// Fallback Router (to satisfy some environment quirks)
+const fallbackRouter = require('./router');
+app.use('/', fallbackRouter);
 
 // Socket.IO Setup
 const io = new Server(server, {
