@@ -1,189 +1,174 @@
-# Navify — Smart Commuter
+# 🚦 NAVIFY - Smart Traffic & Navigation System
 
-Real-time route suggestions, traffic info, and transit data for smart commuting.
+![License](https://img.shields.io/badge/license-ISC-blue.svg)
+![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-## Quick Start
+**Navify** is a comprehensive, real-time navigation and traffic monitoring system. It leverages advanced backend technologies to provide real-time traffic updates, smart route suggestions, and transit data, all accessible through a responsive modern frontend.
 
-The frontend and backend run as separate servers for better separation of concerns.
+---
 
-### Starting the Backend Server
+## 🌟 Features
 
-```powershell
-cd server
-npm install
-npm start
-```
+*   **Real-time Traffic Updates**: Live traffic data pushed to clients via Socket.IO.
+*   **Smart Routing**: Intelligent route calculation using Geoapify (recommended) or Google Maps.
+*   **User Authentication**: Secure signup and login with JWT and BCrypt.
+*   **Saved Routes**: Users can save their favorite routes for quick access.
+*   **Interactive Map**: Dynamic map interface for visualizing routes and traffic.
+*   **Transit Data**: Integration with public transit schedules and stops.
+*   **API Documentation**: Full Swagger documentation available for the backend API.
 
-Backend runs at http://localhost:3000
+---
 
-### Starting the Frontend Server
+## 🛠 Tech Stack
 
-Open a new terminal:
+### Client (Frontend)
+*   **Framework**: [Vite](https://vitejs.dev/)
+*   **Languages**: HTML5, CSS3, Vanilla JavaScript (ES6+)
+*   **Deployment**: Vercel / Netlify / GitHub Pages
 
-```powershell
-cd client
-npm install
-npm start
-```
+### Server (Backend)
+*   **Runtime**: [Node.js](https://nodejs.org/)
+*   **Framework**: [Express.js](https://expressjs.com/)
+*   **Database**: [SQLite](https://www.sqlite.org/) (Lightweight, file-based)
+*   **Real-time**: [Socket.IO](https://socket.io/)
+*   **Deployment**: Render / Railway
 
-Frontend runs at http://localhost:3001
+---
 
-The frontend will automatically connect to the backend at http://localhost:3000.
+## 🚀 Getting Started
 
-### Custom Backend URL
-
-To point the frontend to a different backend URL:
-
-```powershell
-$env:BACKEND_URL="http://your-backend-url:port"
-cd client
-npm start
-```
-
-Or set `FRONTEND_URL` environment variable on the backend to configure CORS:
-
-```powershell
-$env:FRONTEND_URL="http://localhost:3001"
-cd server
-npm start
-```
-
-## Features
-
-- ✅ Real-time traffic updates via Socket.IO
-- ✅ Smart route finding (Geoapify or Google Maps)
-- ✅ User authentication & saved routes (SQLite + JWT)
-- ✅ Complete CRUD operations for routes, traffic, transit
-- ✅ Responsive web UI
-- ✅ Full test coverage (Jest + Supertest)
-
-## Project Structure
-
-```
-NAVIFY/
-├── client/                  # Static frontend (HTML, CSS, JS)
-│   ├── index.html
-│   ├── css/style.css
-│   └── js/app.js
-├── server/                  # Express backend
-│   ├── config/database.js
-│   ├── controllers/         # API logic
-│   ├── middleware/          # Auth, validation, error handling
-│   ├── models/              # Database schemas
-│   ├── routes/api.js        # API routes
-│   ├── tests/               # Jest test suite
-│   ├── server.js            # Main server entry
-│   └── package.json
-└── README.md
-```
-
-## Setup & Configuration
+Follow these instructions to set up the project locally on your machine.
 
 ### Prerequisites
-- Node.js 14+ and npm
+*   **Node.js** (v20 or higher)
+*   **npm** (Node Package Manager)
+*   **Git**
 
-### API Keys (Optional)
-
-For real routing, configure one of these APIs via environment variables:
-
-**Geoapify (Recommended):**
-```powershell
-$env:GEOAPIFY_API_KEY="YOUR_KEY"
+### 1. Clone the Repository
+```bash
+git clone https://github.com/jessekisaalewalu/NAVIFY.git
+cd NAVIFY
 ```
 
-**Google Maps (Alternative):**
-```powershell
-$env:MAPS_API_KEY="YOUR_KEY"
-```
+### 2. Backend Setup
+The backend handles API requests, database operations, and real-time sockets.
 
-**No API Key?** App runs with mock data and basic fallback routes.
+1.  Navigate to the server directory:
+    ```bash
+    cd server
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  **Configuration (.env)**:
+    Create a `.env` file in the `server` directory with the following content:
+    ```env
+    # Server Configuration
+    NODE_ENV=development
+    PORT=3000
+    HOST=127.0.0.1
 
-### Running with HTTPS
+    # Frontend URL (for CORS)
+    FRONTEND_URL=http://localhost:3001
+    
+    # API Keys (Get these from their respective providers)
+    # Geoapify: https://www.geoapify.com/
+    GEOAPIFY_API_KEY=your_geoapify_key_here
+    # Google Maps: https://console.cloud.google.com/
+    MAPS_API_KEY=your_google_maps_key_here
 
-To serve over HTTPS (e.g., https://localhost:3000):
+    # Security (IMPORTANT: Change this!)
+    JWT_SECRET=your_super_secret_jwt_key
+    ```
+4.  Start the server:
+    ```bash
+    npm run start:dev
+    ```
+    *The server will start on `http://localhost:3000`.*
 
-1. Generate a self-signed certificate:
-```powershell
-cd server
-mkdir ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ssl/localhost.key -out ssl/localhost.crt -subj "/CN=localhost"
-```
+### 3. Frontend Setup
+The frontend is the user interface for the application.
 
-2. Start with SSL env vars:
-```powershell
-$env:SSL_KEY_PATH = "path\to\server\ssl\localhost.key"
-$env:SSL_CERT_PATH = "path\to\server\ssl\localhost.crt"
-npm start
-```
+1.  Open a new terminal and navigate to the client directory:
+    ```bash
+    cd client
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  **Configuration (.env)**:
+    Create a `.env` file in the `client` directory:
+    ```env
+    # Application Config
+    PORT=3001
+    
+    # Backend Connection
+    BACKEND_URL=http://localhost:3000
+    VITE_BACKEND_URL=http://localhost:3000
+    ```
+4.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+    *The client will start on `http://localhost:3001` (or the port shown in terminal).*
 
-3. Open https://localhost:3000 (accept self-signed cert in browser)
+---
 
-## API Endpoints
+## ☁️ Deployment Guide
 
-### Auth
-- `POST /api/auth/register` — Register user
-- `POST /api/auth/login` — Login
-- `GET /api/auth/profile` — Get profile (auth required)
-- `PUT /api/auth/profile` — Update profile (auth required)
+### Backend Deployment (Render)
+We recommend **Render** for hosting the Node.js backend.
 
-### Routes
-- `GET /api/routes?origin=...&dest=...` — Find routes
-- `POST /api/routes` — Save route (auth required)
-- `GET /api/routes/saved` — Get saved routes (auth required)
-- `GET /api/routes/saved/:id` — Get saved route (auth required)
-- `PUT /api/routes/saved/:id` — Update saved route (auth required)
-- `DELETE /api/routes/saved/:id` — Delete saved route (auth required)
+1.  Push your code to GitHub.
+2.  Go to [Render Dashboard](https://dashboard.render.com).
+3.  Click **New +** -> **Web Service**.
+4.  Connect your GitHub repository.
+5.  **Important Settings**:
+    *   **Root Directory**: `server`
+    *   **Build Command**: `npm install`
+    *   **Start Command**: `node server.js`
+6.  **Environment Variables**:
+    Add the variables from your `server/.env` file (e.g., `JWT_SECRET`, `node_env=production`).
+    *   Set `FRONTEND_URL` to your production frontend URL (once deployed).
+7.  Click **Create Web Service**.
 
-### Traffic
-- `GET /api/traffic` — Get all traffic areas
-- `GET /api/traffic/:id` — Get traffic area
-- `POST /api/traffic` — Create (auth required)
-- `PUT /api/traffic/:id` — Update (auth required)
-- `PUT /api/traffic` — Bulk update (auth required)
-- `DELETE /api/traffic/:id` — Delete (auth required)
+### Frontend Deployment (Vercel)
+We recommend **Vercel** for the Vite frontend.
 
-### Transit
-- `GET /api/transit?lat=...&lng=...` — Get transit info
-- `GET /api/transit/stops` — Get all stops
-- `POST /api/transit/stops` — Create (auth required)
-- `PUT /api/transit/stops/:id` — Update (auth required)
-- `DELETE /api/transit/stops/:id` — Delete (auth required)
+1.  Go to [Vercel Dashboard](https://vercel.com).
+2.  Click **Add New...** -> **Project**.
+3.  Import your NAVIFY repository.
+4.  **Framework Preset**: Select **Vite**.
+5.  **Root Directory**: Edit and select `client`.
+6.  **Environment Variables**:
+    *   `VITE_BACKEND_URL`: The URL of your deployed Render backend (e.g., `https://navify-backend.onrender.com`).
+7.  Click **Deploy**.
 
-### Geocoding
-- `GET /api/geocode?address=...` — Geocode address
-- `GET /api/config` — Server config
+---
 
-## Testing
+## 📚 API Documentation
 
-```powershell
-cd server
-npm test              # Run full test suite
-npm run test:watch   # Watch mode
-```
+When the backend server is running, you can access the full Swagger API documentation at:
+`http://localhost:3000/api-docs`
 
-Test coverage: Auth, routes, traffic, transit, CRUD operations, error handling.
+**Key Endpoints:**
+*   `GET /api/routes`: Calculate routes between points.
+*   `GET /api/traffic`: Retrieve current traffic conditions.
+*   `POST /api/auth/login`: Authenticate a user.
+*   `GET /api/auth/profile`: Get current user details.
 
-## Development Notes
+---
 
-- **Frontend:** Uses relative API URLs (no CORS issues)
-- **Backend:** Express with SQLite, JWT auth, Socket.IO for real-time updates
-- **Database:** SQLite with users, routes, traffic_areas, transit_stops tables
-- **Swagger Docs:** Available at `/api-docs` when server is running
+## ❓ Troubleshooting
 
-## Troubleshooting
+*   **"Permission Denied" on Build**: Ensure your build script in `client/package.json` is executable. We've fixed this by ensuring `vite` is properly linked in dependencies.
+*   **CORS Errors**: Check that the `FRONTEND_URL` in your backend `.env` matches your frontend's actual URL.
+*   **Database Errors**: The SQLite database file is created automatically in `server/data`. Ensure the server has write permissions to this folder.
 
-**Routes not showing?**
-- Set a Geoapify or Google Maps API key
-- Restart server after setting env var
+---
 
-**Can't find app?**
-- Ensure server is running: `npm start` (in server folder)
-- Try http://localhost:3000
-
-**Location not working?**
-- Allow location access in browser
-- Use HTTPS (some browsers require it)
-
-## License
-
-Demo project for educational purposes.
+## 📄 License
+This project is licensed under the ISC License.
