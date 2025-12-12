@@ -56,7 +56,7 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;backgroun
 
 /* slide-in animation */
 .slide-in{opacity:1;transform:none;transition:all .7s cubic-bezier(.2,.9,.2,1)}
-.js .slide-in{opacity:0;transform:translateY(20px)}
+.js .slide-in{opacity:1;transform:none}
 .js .slide-in.visible{opacity:1;transform:none}
 
 /* fancy zip effect for header */
